@@ -1,9 +1,21 @@
 "use client";
 
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { apiService, type User } from "@/lib/api";
 import { toast } from "sonner";
+import { performLogoutCleanup } from "@/lib/storage";
+
+// Helper function to validate Solana address
+const isSolanaAddress = (address: string): boolean => {
+  try {
+    // Solana addresses are base58 encoded and typically 32-44 characters long
+    // This is a basic validation - you might want to use a more robust check
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+  } catch {
+    return false;
+  }
+};
 
 export function useAuth() {
   const { 
@@ -12,248 +24,253 @@ export function useAuth() {
     user: privyUser, 
     login, 
     logout: privyLogout,
-    linkWallet,
-    unlinkWallet,
     getAccessToken,
-    connectWallet: privyConnectWallet,
   } = usePrivy();
   
   const { wallets } = useWallets();
+  
+  // Flag to prevent multiple sync requests
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
 
-  // Login with backend using Privy access token
-  const loginWithBackend = useCallback(async () => {
-    if (!privyUser || !authenticated || isLoggingOut || isLoggingIn) return;
-
-    setIsLoggingIn(true);
-    setLoading(true);
-    try {
-      // Get Privy access token
-      const accessToken = await getAccessToken();
-      if (!accessToken) {
-        throw new Error('Failed to get access token from Privy');
-      }
-
-      // Login with backend
-      const response = await apiService.login({ accessToken });
-      
-      if (response.success && response.data) {
-        const { user: backendUser, token: backendToken } = response.data;
-        setUser(backendUser);
-        setToken(backendToken);
-        apiService.setToken(backendToken);
-        
-        // Store token in localStorage for persistence
-        localStorage.setItem('auth_token', backendToken);
-        
-        toast.success(response.message);
-      }
-    } catch (error) {
-      console.error('Error logging in with backend:', error);
-      toast.error('Failed to authenticate with backend');
-    } finally {
-      setLoading(false);
-      setIsLoggingIn(false);
+  // Get wallet address from Privy user (prioritize Solana wallets)
+  const getWalletAddress = useCallback(() => {
+    if (!privyUser) return null;
+    
+    // First, check for Solana wallets in external wallets
+    const solanaWallet = wallets.find(wallet => 
+      wallet.walletClientType === 'phantom' || 
+      wallet.walletClientType === 'solflare' ||
+      wallet.walletClientType === 'backpack' ||
+      wallet.walletClientType === 'coinbase_wallet'
+    );
+    
+    if (solanaWallet && isSolanaAddress(solanaWallet.address)) {
+      return solanaWallet.address;
     }
-  }, [privyUser, authenticated, getAccessToken, isLoggingOut, isLoggingIn]);
+    
+    // Check for embedded Solana wallet in linked accounts
+    const embeddedSolanaWallet = privyUser.linkedAccounts.find(
+      account => account.type === 'wallet' && 
+      account.walletClientType === 'privy'
+    );
+    
+    if (embeddedSolanaWallet && 'address' in embeddedSolanaWallet && 
+        isSolanaAddress(embeddedSolanaWallet.address)) {
+      return embeddedSolanaWallet.address;
+    }
+    
+    // Fallback to any embedded wallet (validate it's Solana)
+    const embeddedWallet = privyUser.linkedAccounts.find(
+      account => account.type === 'wallet'
+    );
+    
+    if (embeddedWallet && 'address' in embeddedWallet && 
+        isSolanaAddress(embeddedWallet.address)) {
+      return embeddedWallet.address;
+    }
+    
+    // Fallback to any external wallet (validate it's Solana)
+    const validSolanaWallet = wallets.find(wallet => isSolanaAddress(wallet.address));
+    if (validSolanaWallet) {
+      return validSolanaWallet.address;
+    }
+    
+    return null;
+  }, [privyUser, wallets]);
 
-  // Sync user data (update wallet addresses if changed)
-  const syncUser = useCallback(async () => {
-    if (!user || !token || isSyncing) return;
+  // Get user image from Google account or default
+  const getUserImage = useCallback((): string => {
+    if (!privyUser) return 'https://via.placeholder.com/150';
+    
+    const googleAccount = privyUser.linkedAccounts.find(
+      account => account.type === 'google_oauth'
+    );
+    
+    if (googleAccount && 'picture' in googleAccount && typeof googleAccount.picture === 'string') {
+      return googleAccount.picture;
+    }
+    
+    return 'https://via.placeholder.com/150';
+  }, [privyUser]);
 
-    setIsSyncing(true);
-    try {
-      // Find Solana wallets (embedded or external like Phantom)
-      const solanaWallet = wallets.find(w => 
-        w.walletClientType === 'privy' ||
-        w.connectorType === 'phantom' ||
-        w.connectorType === 'solflare' ||
-        w.connectorType === 'backpack'
-      );
-      
-      // Find Ethereum wallets (external wallets that are not Solana)
-      const ethWallet = wallets.find(w => 
-        w.walletClientType !== 'privy' && 
-        w.connectorType !== 'phantom' &&
-        w.connectorType !== 'solflare' &&
-        w.connectorType !== 'backpack'
-      );
-      
-      const updateData: Partial<{ solanaWalletAddress: string; ethWalletAddress: string }> = {};
-      
-      if (solanaWallet?.address && user.solanaWalletAddress !== solanaWallet.address) {
-        updateData.solanaWalletAddress = solanaWallet.address;
-      }
-      
-      if (ethWallet?.address && user.ethWalletAddress !== ethWallet.address) {
-        updateData.ethWalletAddress = ethWallet.address;
-      }
+  // Get user name from Google account or wallet
+  const getUserName = useCallback(() => {
+    if (!privyUser) return 'Anonymous User';
+    
+    const googleAccount = privyUser.linkedAccounts.find(
+      account => account.type === 'google_oauth'
+    );
+    
+    if (googleAccount && 'name' in googleAccount && googleAccount.name) {
+      return googleAccount.name;
+    }
+    
+    // Fallback to wallet address if no Google name
+    const walletAddress = getWalletAddress();
+    if (walletAddress) {
+      return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    }
+    
+    return 'Anonymous User';
+  }, [privyUser, getWalletAddress]);
 
-      if (Object.keys(updateData).length > 0) {
-        const response = await apiService.updateUser(user.id, updateData);
-        if (response.success && response.data) {
-          setUser(response.data);
+  // Get user email from Google OAuth or Privy email
+  const getUserEmail = useCallback(() => {
+    if (!privyUser) return undefined;
+    
+    // First, try to get email from Google OAuth account
+    const googleAccount = privyUser.linkedAccounts.find(
+      account => account.type === 'google_oauth'
+    );
+    
+    if (googleAccount && 'email' in googleAccount && googleAccount.email) {
+      return googleAccount.email;
+    }
+    
+    // Fallback to Privy email
+    return privyUser.email?.address || undefined;
+  }, [privyUser]);
+
+  // Sync user with backend
+  const syncWithBackend = useCallback(async () => {
+    if (!privyUser || !ready || !authenticated || isSyncing) return;
+
+    // Clear any existing timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Debounce the sync operation
+    syncTimeoutRef.current = setTimeout(async () => {
+      if (isSyncing) return; // Double check to prevent race conditions
+      
+      try {
+        setIsSyncing(true);
+        setLoading(true);
+        
+        const walletAddress = getWalletAddress();
+        if (!walletAddress) {
+          console.error('No valid Solana wallet address found');
+          toast.error('Please connect a valid Solana wallet');
+          return;
         }
-      }
-    } catch (error) {
-      console.error('Error syncing user:', error);
-      toast.error('Failed to sync user data');
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [user, token, wallets, isSyncing]);
 
-  // Initialize token from localStorage
-  useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      setToken(storedToken);
-      apiService.setToken(storedToken);
-    }
-  }, []);
+        if (!isSolanaAddress(walletAddress)) {
+          console.error('Invalid Solana wallet address format:', walletAddress);
+          toast.error('Invalid Solana wallet address format');
+          return;
+        }
+
+        const accessToken = await getAccessToken();
+        if (!accessToken) {
+          console.error('No access token available');
+          return;
+        }
+
+        const userData = {
+          fullname: getUserName(),
+          privyId: privyUser.id,
+          walletAddress,
+          email: getUserEmail(),
+          image: getUserImage(),
+        };
+
+        console.log('Syncing user data:', userData);
+        const createdUser = await apiService.createUser(userData, accessToken);
+        setUser(createdUser);
+        console.log('User synced successfully:', createdUser);
+      } catch (error) {
+        console.error('Failed to sync user with backend:', error);
+        if (error instanceof Error && error.message.includes('User already exists')) {
+          // User already exists, this is fine
+          console.log('User already exists in backend');
+        } else {
+          toast.error('Failed to sync user data');
+        }
+      } finally {
+        setLoading(false);
+        setIsSyncing(false);
+      }
+    }, 500); // 500ms debounce delay
+  }, [privyUser, ready, authenticated, isSyncing, getAccessToken, getWalletAddress, getUserName, getUserEmail, getUserImage]);
 
   // Handle authentication state changes
   useEffect(() => {
-    if (ready && authenticated && privyUser && !user && !isLoggingOut && !isLoggingIn) {
-      loginWithBackend();
-    } else if (ready && !authenticated && !isLoggingOut && !isLoggingIn) {
+    if (ready && authenticated && privyUser && !user && !isLoggingOut) {
+      syncWithBackend();
+    } else if (ready && !authenticated && !isLoggingOut) {
       setUser(null);
-      setToken(null);
-      apiService.setToken(null);
-      localStorage.removeItem('auth_token');
     }
-  }, [ready, authenticated, privyUser, user, loginWithBackend, isLoggingOut, isLoggingIn]);
-
-  // Sync wallet addresses when wallets change (debounced)
-  useEffect(() => {
-    if (user && wallets.length > 0) {
-      const timeoutId = setTimeout(() => {
-        syncUser();
-      }, 500); // 500ms debounce
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [wallets, user, syncUser]);
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [ready, authenticated, privyUser, user, syncWithBackend, isLoggingOut]);
 
   const logout = async () => {
-    // Set logout flag to prevent any login attempts during logout
     setIsLoggingOut(true);
     
     try {
-      // Logout from backend if we have a token (but don't let this block the cleanup)
-      if (token) {
-        try {
-          await apiService.logout();
-        } catch (backendError) {
-          console.warn('Backend logout failed, but continuing with cleanup:', backendError);
-        }
-      }
-      
-      // Clear all localStorage items that might contain auth data
-      localStorage.removeItem('auth_token');
-      // Clear any other potential auth-related localStorage items
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.includes('privy') || 
-          key.includes('auth') || 
-          key.includes('token') || 
-          key.includes('wallet') ||
-          key.includes('user')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Clear sessionStorage completely to be safe
-      sessionStorage.clear();
-      
-      // Clear any authentication cookies
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-        if (name.includes('auth') || name.includes('token') || name.includes('privy') || name.includes('wallet')) {
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-        }
-      });
-      
-      // Clear local React state
+      // Clear local React state first
       setUser(null);
-      setToken(null);
       setLoading(false);
       
-      // Clear API service token and any cached data
-      apiService.setToken(null);
+      // Perform comprehensive cleanup of localStorage and cookies
+      performLogoutCleanup();
       
-      // Logout from Privy (this should clear all Privy-related data and wallet connections)
+      // Logout from Privy (this should be done after our cleanup)
       await privyLogout();
+      
+      // Additional cleanup after Privy logout in case Privy adds new data
+      setTimeout(() => {
+        performLogoutCleanup();
+      }, 100);
       
       toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
       
-      // Even if logout fails, still clear local data for security
+      // Even if logout fails, still clear local data
       setUser(null);
-      setToken(null);
       setLoading(false);
-      apiService.setToken(null);
-      localStorage.clear();
-      sessionStorage.clear();
       
-      toast.error('Logout completed with some errors, but local data has been cleared');
+      // Ensure cleanup happens even on error
+      performLogoutCleanup();
+      
+      toast.error('Logout completed with some errors');
     } finally {
-      // Reset logout flag after logout is complete
       setIsLoggingOut(false);
     }
   };
 
-  const connectWallet = async () => {
-    try {
-      // Use Privy's connectWallet method which better handles external wallets like Phantom
-      await privyConnectWallet();
-      toast.success('Wallet connected successfully');
-    } catch (error) {
-      console.error('Wallet connection error:', error);
-      toast.error('Failed to connect wallet');
-    }
-  };
-
-  const disconnectWallet = async (walletAddress: string) => {
-    try {
-      await unlinkWallet(walletAddress);
-      toast.success('Wallet disconnected successfully');
-    } catch (error) {
-      console.error('Wallet disconnection error:', error);
-      toast.error('Failed to disconnect wallet');
-    }
-  };
-
   return {
-    // Privy states
+    // Authentication state
     ready,
     authenticated,
-    privyUser,
-    wallets,
-    
-    // Our app states
     user,
-    loading,
-    token,
+    loading: loading || isSyncing,
+    
+    // User info helpers
+    walletAddress: getWalletAddress(),
+    userName: getUserName(),
+    userImage: getUserImage(),
     
     // Actions
     login,
     logout,
-    connectWallet,
-    disconnectWallet,
-    syncUser,
-    loginWithBackend,
+    
+    // Sync state
+    isSyncing,
+    
+    // Privy user and wallets for advanced usage
+    privyUser,
+    wallets,
   };
 }

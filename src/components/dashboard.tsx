@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,20 +16,25 @@ import {
   WalletIcon, 
   ArrowRightOnRectangleIcon,
   PlusIcon,
-  TrashIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
+import { useWallets, useConnectWallet } from "@privy-io/react-auth";
 
 export function Dashboard() {
   const {
     user,
     loading,
-    wallets,
+    walletAddress,
+    userName,
+    userImage,
     logout,
-    connectWallet,
-    disconnectWallet,
+    login,
+    privyUser,
   } = useAuth();
+
+  const { wallets } = useWallets();
+  const { connectWallet } = useConnectWallet();
 
   const handleCopyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -49,39 +54,26 @@ export function Dashboard() {
       .slice(0, 2);
   };
 
-  const getRoleColor = (role: string) => {
-    return role === 'admin' ? 'text-purple-600' : 'text-blue-600';
-  };
-
-  const getStatusColor = (isActive: boolean, isVerified: boolean) => {
-    if (!isActive) return 'text-red-600';
-    if (isVerified) return 'text-green-600';
-    return 'text-yellow-600';
-  };
-
-  const getStatusText = (isActive: boolean, isVerified: boolean) => {
-    if (!isActive) return 'Inactive';
-    if (isVerified) return 'Verified';
-    return 'Unverified';
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-black">Dashboard</h1>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gray-100 text-black">
-                      {user?.name ? getInitials(user.name) : <UserIcon className="h-4 w-4" />}
+                    {userImage && userImage !== 'https://via.placeholder.com/150' ? (
+                      <AvatarImage src={userImage} alt={userName} />
+                    ) : null}
+                    <AvatarFallback className="bg-muted text-foreground">
+                      {userName ? getInitials(userName) : <UserIcon className="h-4 w-4" />}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{user?.name || user?.email}</span>
+                  <span className="hidden sm:inline">{userName}</span>
                   <ChevronDownIcon className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -91,7 +83,7 @@ export function Dashboard() {
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600">
+                <DropdownMenuItem onClick={logout} className="text-destructive">
                   <ArrowRightOnRectangleIcon className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
@@ -106,8 +98,8 @@ export function Dashboard() {
           {/* Welcome Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl text-black">
-                Welcome back, {user?.name || 'User'}!
+              <CardTitle className="text-2xl text-foreground">
+                Welcome back, {userName}!
               </CardTitle>
               <CardDescription>
                 Manage your profile and connected wallets from your dashboard.
@@ -118,7 +110,7 @@ export function Dashboard() {
           {/* Profile Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-black">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <UserIcon className="h-5 w-5" />
                 Profile Information
               </CardTitle>
@@ -126,37 +118,23 @@ export function Dashboard() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Name</label>
-                  <p className="text-black">{user?.name || 'Not provided'}</p>
+                  <label className="text-sm font-medium text-muted-foreground">Name</label>
+                  <p className="text-foreground">{userName || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <p className="text-black">{user?.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Username</label>
-                  <p className="text-black">@{user?.username}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Role</label>
-                  <p className={`font-medium ${getRoleColor(user?.role || 'user')}`}>
-                    {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-foreground">
+                    {privyUser?.email?.address || 'Not provided'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Status</label>
-                  <p className={`font-medium ${getStatusColor(user?.isActive || false, user?.isVerified || false)}`}>
-                    {getStatusText(user?.isActive || false, user?.isVerified || false)}
-                  </p>
+                  <label className="text-sm font-medium text-muted-foreground">Privy ID</label>
+                  <p className="text-muted-foreground font-mono text-sm">{privyUser?.id || 'Not linked'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Privy ID</label>
-                  <p className="text-gray-600 font-mono text-sm">{user?.privyUserId || 'Not linked'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Member Since</label>
-                  <p className="text-black">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                  <label className="text-sm font-medium text-muted-foreground">Member Since</label>
+                  <p className="text-foreground">
+                    {user?.joinDate ? new Date(user.joinDate).toLocaleDateString() : 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -167,7 +145,7 @@ export function Dashboard() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-black">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <WalletIcon className="h-5 w-5" />
                   Wallet Addresses
                 </CardTitle>
@@ -175,104 +153,80 @@ export function Dashboard() {
                   onClick={connectWallet}
                   disabled={loading}
                   size="sm"
-                  className="bg-black text-white hover:bg-gray-800"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
                   Connect Wallet
                 </Button>
               </div>
               <CardDescription>
-                Manage your Solana and Ethereum wallet addresses.
+                Manage your Solana wallet addresses.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Solana Wallet */}
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-full">
-                        <WalletIcon className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-black">Solana Wallet</p>
-                        {user?.solanaWalletAddress ? (
+                {/* Primary Wallet Address */}
+                {walletAddress && (
+                  <div className="p-4 border border-border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <WalletIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">Primary Solana Wallet</p>
                           <button
-                            onClick={() => handleCopyAddress(user.solanaWalletAddress!)}
-                            className="text-sm text-gray-600 hover:text-black font-mono"
+                            onClick={() => handleCopyAddress(walletAddress)}
+                            className="text-sm text-muted-foreground hover:text-foreground font-mono"
                           >
-                            {formatAddress(user.solanaWalletAddress)}
+                            {formatAddress(walletAddress)}
                           </button>
-                        ) : (
-                          <p className="text-sm text-gray-500">Not connected</p>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Ethereum Wallet */}
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <WalletIcon className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-black">Ethereum Wallet</p>
-                        {user?.ethWalletAddress ? (
-                          <button
-                            onClick={() => handleCopyAddress(user.ethWalletAddress!)}
-                            className="text-sm text-gray-600 hover:text-black font-mono"
-                          >
-                            {formatAddress(user.ethWalletAddress)}
-                          </button>
-                        ) : (
-                          <p className="text-sm text-gray-500">Not connected</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 {/* Connected Wallets from Privy */}
                 {wallets.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-black mb-3">Active Wallet Connections</h4>
+                    <h4 className="font-medium text-foreground mb-3">Connected Wallets</h4>
                     <div className="space-y-3">
                       {wallets.map((wallet, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50"
+                          className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/50"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gray-100 rounded-full">
-                              <WalletIcon className="h-5 w-5 text-gray-600" />
+                            <div className="p-2 bg-muted rounded-full">
+                              <WalletIcon className="h-5 w-5 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="font-medium text-black">
+                              <p className="font-medium text-foreground">
                                 {wallet.walletClientType === 'privy' ? 'Embedded Wallet' : 'External Wallet'}
                               </p>
                               <button
                                 onClick={() => handleCopyAddress(wallet.address)}
-                                className="text-sm text-gray-600 hover:text-black font-mono"
+                                className="text-sm text-muted-foreground hover:text-foreground font-mono"
                               >
                                 {formatAddress(wallet.address)}
                               </button>
                             </div>
                           </div>
-                          <Button
-                            onClick={() => disconnectWallet(wallet.address)}
-                            disabled={loading}
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </Button>
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* No wallets connected */}
+                {!walletAddress && wallets.length === 0 && (
+                  <div className="text-center py-8">
+                    <WalletIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">No wallets connected</p>
+                    <Button onClick={connectWallet} disabled={loading}>
+                      Connect Your First Wallet
+                    </Button>
                   </div>
                 )}
               </div>
@@ -282,7 +236,7 @@ export function Dashboard() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-black">Quick Actions</CardTitle>
+              <CardTitle className="text-foreground">Quick Actions</CardTitle>
               <CardDescription>
                 Common tasks and shortcuts for your account.
               </CardDescription>
@@ -297,17 +251,17 @@ export function Dashboard() {
                 >
                   <div className="text-left">
                     <div className="font-medium">Connect New Wallet</div>
-                    <div className="text-sm text-gray-600">Add another Solana wallet</div>
+                    <div className="text-sm text-muted-foreground">Add another Solana wallet</div>
                   </div>
                 </Button>
                 <Button
+                  onClick={() => login()}
                   variant="outline"
                   className="justify-start h-auto p-4"
-                  disabled
                 >
                   <div className="text-left">
-                    <div className="font-medium">Export Data</div>
-                    <div className="text-sm text-gray-600">Download your account data</div>
+                    <div className="font-medium">Reconnect Account</div>
+                    <div className="text-sm text-muted-foreground">Refresh your connection</div>
                   </div>
                 </Button>
               </div>
