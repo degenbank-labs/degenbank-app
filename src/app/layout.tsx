@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/providers/providers";
 
@@ -11,6 +12,18 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const cirkaVariable = localFont({
+  src: [
+    {
+      path: "../../public/fonts/Cirka-Variable.woff2",
+      style: "normal",
+    },
+  ],
+  variable: "--font-cirka",
+  display: "swap",
+  fallback: ["system-ui", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${cirkaVariable.variable} antialiased`}
       >
         <Providers>{children}</Providers>
       </body>

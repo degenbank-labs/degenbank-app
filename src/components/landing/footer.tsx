@@ -1,65 +1,115 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { MessageCircle, Twitter } from "lucide-react";
+import { Button } from "../ui/button";
 
 export function Footer() {
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleExternalLink = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
-    <footer className="border-t border-white/10 bg-black/80 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="flex items-start justify-evenly">
-          {/* Brand */}
-          <div className="flex-1">
-            <div className="mb-4 flex items-center">
-              <Image
-                src="/assets/logo/degenbank-logo.png"
-                alt="Degen Bank"
-                width={160}
-                height={36}
-                className="h-8 w-auto"
-                priority
-              />
+    <footer className="bg-primary fixed right-0 bottom-0 left-0 z-0 h-[400px] w-full">
+      <div className="mx-auto flex h-full max-w-6xl flex-col px-6 py-8">
+        {/* Top Section - 3 Columns */}
+        <div className="flex flex-col justify-between gap-8 md:flex-row">
+          {/* Left Column - Description & Social */}
+          <div className="w-full space-y-6 md:w-1/3">
+            <div className="space-y-3">
+              <p className="text-base leading-relaxed text-black/80">
+                The ultimate platform for yield farming and DeFi strategies.
+                Join the community and maximize your crypto potential.
+              </p>
             </div>
-            <p className="mb-6 max-w-sm text-sm leading-relaxed text-white/70">
-              Where yield competes and glory compounds. The ultimate arena for
-              DeFi vault managers and yield farmers.
-            </p>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white"
+            <div className="space-y-3">
+              <div className="flex space-x-4">
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => handleExternalLink('https://discord.gg/degenbank')}
+                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 hover:bg-transparent hover:text-black transition-colors duration-200"
+                >
+                  <MessageCircle size={16} />
+                  Discord
+                </Button>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => handleExternalLink('https://twitter.com/degenbank')}
+                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 hover:bg-transparent hover:text-black transition-colors duration-200"
+                >
+                  <Twitter size={16} />
+                  X / Twitter
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Center Column - Navigation */}
+          <div>
+            <div className="flex flex-col space-y-3">
+              <button
+                onClick={() => scrollToSection('how-it-works')}
+                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
               >
-                Twitter
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white"
+                How It Works
+              </button>
+              <button
+                onClick={() => scrollToSection('vault')}
+                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
               >
-                Discord
-              </Button>
+                Vault
+              </button>
+              <button
+                onClick={() => handleExternalLink('#')}
+                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+              >
+                Whitepaper
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column - Support & Legal */}
+          <div className="space-y-6">
+            <div className="flex flex-col space-y-3">
+              <a
+                href="mailto:support@degenbank.cc"
+                className="text-base text-black/80 transition-colors hover:text-black"
+              >
+                support@degenbank.cc
+              </a>
+              <button
+                onClick={() => handleExternalLink('#')}
+                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+              >
+                Privacy Policy
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between border-t border-white/10 pt-8 md:flex-row">
-          <p className="text-sm text-white/60">
-            © 2024 Degen Bank. All rights reserved.
-          </p>
-          <div className="mt-4 flex space-x-6 md:mt-0">
-            <a
-              href="#privacy"
-              className="text-sm text-white/60 transition-colors hover:text-white"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="#terms"
-              className="text-sm text-white/60 transition-colors hover:text-white"
-            >
-              Terms of Service
-            </a>
+        {/* Bottom Section - Logo & Brand */}
+        <div className="flex h-full w-full flex-col items-center justify-center">
+          <div className="flex items-center justify-center gap-4">
+            <Image
+              src="/assets/logo/degenbank-logo.png"
+              alt="Degen Bank"
+              width={240}
+              height={72}
+              className="mt-4 h-20 md:h-28 w-auto brightness-75"
+              priority
+            />
+            <p className="font-cirka text-6xl md:text-9xl font-bold whitespace-nowrap text-[#5C9487]">
+              Degen Bank
+            </p>
           </div>
         </div>
       </div>
