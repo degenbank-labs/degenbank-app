@@ -236,15 +236,15 @@ const data = [
 
 export function WhatIsYieldArena() {
   return (
-    <section id="how-it-works" className="bg-background py-12 md:py-20">
+    <section id="how-it-works" className="bg-black py-12 md:py-20">
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-6xl">
           {/* Header */}
-          <div className="mb-12 md:mb-16 text-center">
-            <h2 className="font-cirka mb-4 md:mb-6 text-3xl md:text-4xl lg:text-6xl xl:text-7xl font-bold">
+          <div className="mb-12 text-center md:mb-16">
+            <h2 className="font-cirka mb-4 text-3xl font-bold md:mb-6 md:text-4xl lg:text-6xl xl:text-7xl">
               What is Yield Arena?
             </h2>
-            <p className="text-sm md:text-base lg:text-lg mx-auto max-w-4xl leading-relaxed text-white/80 px-2">
+            <p className="mx-auto max-w-4xl px-2 text-sm leading-relaxed text-white/80 md:text-base lg:text-lg">
               Competitive DeFi vaults with no-loss structure. Real yield,
               on-chain metrics.
               <br className="hidden sm:block" />
@@ -256,10 +256,10 @@ export function WhatIsYieldArena() {
           {/* Flow Diagram */}
           <div className="mb-20 md:mb-40">
             {/* Three Main Cards */}
-            <div className="mb-8 md:mb-12 grid grid-cols-1 gap-6 md:gap-8 md:grid-cols-3">
+            <div className="mb-8 grid grid-cols-1 gap-6 md:mb-12 md:grid-cols-3 md:gap-8">
               {/* Card 1: User Stake */}
               <div className="text-center">
-                <div className="relative mx-auto mb-4 md:mb-6 h-48 md:h-80 w-full overflow-hidden rounded-lg">
+                <div className="relative mx-auto mb-4 h-48 w-full overflow-hidden rounded-lg md:mb-6 md:h-80">
                   <Image
                     src="/assets/works/1.png"
                     alt="User Stake"
@@ -267,10 +267,10 @@ export function WhatIsYieldArena() {
                     className="object-cover"
                   />
                 </div>
-                <h4 className="font-cirka mb-2 md:mb-3 text-xl md:text-2xl font-bold">
+                <h4 className="font-cirka mb-2 text-xl font-bold md:mb-3 md:text-2xl">
                   1. User Stake
                 </h4>
-                <p className="text-sm md:text-base leading-relaxed text-white/70 px-2">
+                <p className="px-2 text-sm leading-relaxed text-white/70 md:text-base">
                   Users choose and stake into competing vaults based on manager
                   reputation and strategy
                 </p>
@@ -278,7 +278,7 @@ export function WhatIsYieldArena() {
 
               {/* Card 2: Vaults Compete */}
               <div className="text-center">
-                <div className="relative mx-auto mb-4 md:mb-6 h-48 md:h-80 w-full overflow-hidden rounded-lg">
+                <div className="relative mx-auto mb-4 h-48 w-full overflow-hidden rounded-lg md:mb-6 md:h-80">
                   <Image
                     src="/assets/works/2.png"
                     alt="Vaults Compete"
@@ -286,10 +286,10 @@ export function WhatIsYieldArena() {
                     className="object-cover"
                   />
                 </div>
-                <h4 className="font-cirka mb-2 md:mb-3 text-xl md:text-2xl font-bold">
+                <h4 className="font-cirka mb-2 text-xl font-bold md:mb-3 md:text-2xl">
                   2. Vaults Compete
                 </h4>
-                <p className="text-sm md:text-base leading-relaxed text-white/70 px-2">
+                <p className="px-2 text-sm leading-relaxed text-white/70 md:text-base">
                   Managers deploy strategies and battle for highest ROI during
                   the competition period
                 </p>
@@ -297,7 +297,7 @@ export function WhatIsYieldArena() {
 
               {/* Card 3: Best ROI Wins */}
               <div className="text-center">
-                <div className="relative mx-auto mb-4 md:mb-6 h-48 md:h-80 w-full overflow-hidden rounded-lg">
+                <div className="relative mx-auto mb-4 h-48 w-full overflow-hidden rounded-lg md:mb-6 md:h-80">
                   <Image
                     src="/assets/works/3.png"
                     alt="Best ROI Wins"
@@ -305,10 +305,10 @@ export function WhatIsYieldArena() {
                     className="object-cover"
                   />
                 </div>
-                <h4 className="font-cirka mb-2 md:mb-3 text-xl md:text-2xl font-bold">
+                <h4 className="font-cirka mb-2 text-xl font-bold md:mb-3 md:text-2xl">
                   3. Best ROI Wins
                 </h4>
-                <p className="text-sm md:text-base leading-relaxed text-white/70 px-2">
+                <p className="px-2 text-sm leading-relaxed text-white/70 md:text-base">
                   Highest performing vault takes the crown and all accumulated
                   yield
                 </p>
@@ -316,7 +316,7 @@ export function WhatIsYieldArena() {
             </div>
           </div>
 
-          <h3 className="font-cirka mb-8 md:mb-12 text-center text-3xl md:text-4xl lg:text-5xl font-bold">
+          <h3 className="font-cirka mb-8 text-center text-3xl font-bold md:mb-12 md:text-4xl lg:text-5xl">
             How It Works
           </h3>
 

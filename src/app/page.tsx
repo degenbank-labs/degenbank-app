@@ -2,10 +2,9 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { LandingPage } from "@/components/landing-page";
-import { Dashboard } from "@/components/dashboard";
 
 export default function Home() {
-  const { ready, authenticated } = useAuth();
+  const { ready } = useAuth();
 
   // Show loading state while Privy is initializing
   if (!ready) {
@@ -19,6 +18,6 @@ export default function Home() {
     );
   }
 
-  // Show dashboard if authenticated, otherwise show landing page
-  return authenticated ? <Dashboard /> : <LandingPage />;
+  // Show landing page for all users (authenticated and non-authenticated)
+  return <LandingPage />;
 }
