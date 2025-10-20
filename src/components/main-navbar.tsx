@@ -16,6 +16,7 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -56,24 +57,41 @@ export function MainNavbar() {
       .slice(0, 2);
   };
 
-  const navItems = [
+  const navItems = [{ name: "Vaults", href: "/vaults/strategy-vaults" }];
+
+  const overviewItems = [
     { name: "Overview", href: "/overview" },
-    { name: "Vaults", href: "/vaults/strategy-vaults" },
-    { name: "Battle", href: "/battle" },
-    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Positions", href: "/overview/positions" },
+    { name: "History", href: "/overview/history" },
+  ];
+
+  const arenaItems = [
+    { name: "Battle", href: "/arena/battle" },
+    { name: "Leaderboard", href: "/arena/leaderboard" },
   ];
 
   const isActiveLink = (href: string) => {
     if (href === "/overview") {
-      return pathname.startsWith("/overview");
+      return pathname === "/overview";
     }
     if (href === "/vaults/strategy-vaults") {
       return pathname.startsWith("/vaults");
     }
-    if (href === "/battle") {
-      return pathname.startsWith("/battle");
+    if (href === "/arena/battle") {
+      return pathname.startsWith("/arena/battle");
+    }
+    if (href === "/arena/leaderboard") {
+      return pathname.startsWith("/arena/leaderboard");
     }
     return pathname === href;
+  };
+
+  const isOverviewActive = () => {
+    return pathname === "/overview";
+  };
+
+  const isArenaActive = () => {
+    return pathname.startsWith("/arena");
   };
 
   return (
@@ -99,6 +117,43 @@ export function MainNavbar() {
 
             {/* Desktop Navigation - Moved to left side */}
             <div className="hidden items-center space-x-6 md:flex">
+              {/* Overview Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild className="hover:bg-transparent">
+                  <Button
+                    variant="ghost"
+                    className={`hover:text-primary flex cursor-pointer items-center space-x-1 text-sm font-medium transition-colors ${
+                      isOverviewActive() ? "text-primary" : "text-white/80"
+                    }`}
+                  >
+                    <span>Overview</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-48 rounded-none"
+                  align="start"
+                >
+                  {overviewItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.name}
+                      asChild
+                      className="rounded-none"
+                    >
+                      <Link
+                        href={item.href}
+                        className={`flex cursor-pointer items-center ${
+                          isActiveLink(item.href) ? "text-primary" : ""
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Regular nav items */}
               {navItems.map((item) => (
                 <Link
                   key={item.name}
@@ -110,6 +165,42 @@ export function MainNavbar() {
                   {item.name}
                 </Link>
               ))}
+
+              {/* Arena Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild className="hover:bg-transparent">
+                  <Button
+                    variant="ghost"
+                    className={`hover:text-primary flex cursor-pointer items-center space-x-1 text-sm font-medium transition-colors ${
+                      isArenaActive() ? "text-primary" : "text-white/80"
+                    }`}
+                  >
+                    <span>Arena</span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-48 rounded-none"
+                  align="start"
+                >
+                  {arenaItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.name}
+                      asChild
+                      className="rounded-none"
+                    >
+                      <Link
+                        href={item.href}
+                        className={`flex cursor-pointer items-center ${
+                          isActiveLink(item.href) ? "text-primary" : ""
+                        }`}
+                      >
+                        {item.name}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -206,6 +297,28 @@ export function MainNavbar() {
         {mobileMenuOpen && (
           <div className="absolute top-full right-0 left-0 z-50 border-t border-white/10 bg-black/95 backdrop-blur-sm md:hidden">
             <div className="flex flex-col space-y-2 p-4">
+              {/* Overview Section */}
+              <div className="border-b border-white/10 pb-2">
+                <div className="px-3 py-2 text-sm font-semibold text-white/60">
+                  Overview
+                </div>
+                {overviewItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`block cursor-pointer px-6 py-2 text-base font-medium transition-colors hover:bg-white/10 hover:text-white ${
+                      isActiveLink(item.href)
+                        ? "text-primary bg-primary/10"
+                        : "text-white/90"
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Regular nav items */}
               {navItems.map((item) => (
                 <Link
                   key={item.name}
@@ -220,6 +333,27 @@ export function MainNavbar() {
                   {item.name}
                 </Link>
               ))}
+
+              {/* Arena Section */}
+              <div className="border-t border-white/10 pt-2">
+                <div className="px-3 py-2 text-sm font-semibold text-white/60">
+                  Arena
+                </div>
+                {arenaItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`block cursor-pointer px-6 py-2 text-base font-medium transition-colors hover:bg-white/10 hover:text-white ${
+                      isActiveLink(item.href)
+                        ? "text-primary bg-primary/10"
+                        : "text-white/90"
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         )}
