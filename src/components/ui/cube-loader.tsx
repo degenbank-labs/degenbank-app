@@ -59,7 +59,6 @@ const CubeLoader: React.FC<CubeLoaderProps> = ({ isVisible, onComplete }) => {
         .cube-face {
           position: absolute;
           inset: 0;
-          background: #110d31ff;
           border: solid 2px #6fb7a5; /* Primary color */
         }
 

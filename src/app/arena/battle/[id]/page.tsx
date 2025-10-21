@@ -70,7 +70,7 @@ const battlePhases = [
 export default function BattleDetailPage() {
   const params = useParams();
   const battleId = params.id;
-  
+
   const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
   const [selectedVault, setSelectedVault] = useState<number | null>(null);
 
@@ -92,13 +92,13 @@ export default function BattleDetailPage() {
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case "Low":
-        return "text-green-400";
+        return "text-neutral-200";
       case "Medium":
-        return "text-blue-400";
+        return "text-neutral-200";
       case "High":
-        return "text-orange-400";
+        return "text-neutral-200";
       case "Extreme":
-        return "text-red-400";
+        return "text-neutral-200";
       default:
         return "text-gray-400";
     }
@@ -107,7 +107,7 @@ export default function BattleDetailPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "active":
-        return <ShieldCheckIcon className="h-4 w-4 text-green-400" />;
+        return <ShieldCheckIcon className="text-primary h-4 w-4" />;
       case "warning":
         return <ExclamationTriangleIcon className="h-4 w-4 text-yellow-400" />;
       default:
@@ -151,9 +151,13 @@ export default function BattleDetailPage() {
               </h1>
 
               <p className="mx-auto mb-6 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
-                <span className="text-primary font-semibold">Vault managers compete with strategy.</span>
+                <span className="text-primary font-semibold">
+                  Vault managers compete with strategy.
+                </span>
                 <br />
-                <span className="text-white/80">Users stake with conviction.</span>
+                <span className="text-white/80">
+                  Users stake with conviction.
+                </span>
                 <br />
                 <span className="text-primary font-semibold">
                   The best vault wins it all.
@@ -164,13 +168,13 @@ export default function BattleDetailPage() {
               <div className="mb-6 flex flex-wrap items-center justify-center gap-4">
                 <Badge
                   variant="outline"
-                  className="border-primary text-primary px-4 py-2"
+                  className="border-primary text-primary rounded-none px-4 py-2"
                 >
                   DCA Arena - Phase #1
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="border-blue-400 px-4 py-2 text-blue-400"
+                  className="rounded-none border-purple-400 px-4 py-2 text-purple-400"
                 >
                   <ClockIcon className="mr-2 h-4 w-4" />
                   {timeRemaining}
@@ -186,9 +190,9 @@ export default function BattleDetailPage() {
                     <div
                       className={`mb-2 h-2 w-full ${
                         phase.status === "completed"
-                          ? "bg-primary"
+                          ? "bg-purple-400"
                           : phase.status === "active"
-                            ? "from-primary bg-gradient-to-r to-blue-400"
+                            ? "to-primary bg-gradient-to-r from-purple-400"
                             : "bg-gray-700"
                       }`}
                     />
@@ -216,11 +220,11 @@ export default function BattleDetailPage() {
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="font-cirka flex items-center text-2xl font-bold text-white md:text-3xl">
                     <TrophyIcon className="text-primary mr-3 h-8 w-8" />
-                    <span className="text-white">Battle Leaderboard</span>
+                    <span className="text-white">Vault Battle Leaderboard</span>
                   </h2>
                   <Badge
                     variant="outline"
-                    className="border-primary text-primary"
+                    className="border-primary text-primary rounded-none"
                   >
                     Live Performance
                   </Badge>
@@ -231,9 +235,9 @@ export default function BattleDetailPage() {
                   {sortedVaults.map((vault, index) => (
                     <Card
                       key={vault.id}
-                      className={`bg-card/50 border-border/50 backdrop-blur-sm transition-all duration-300 hover:bg-card/70 ${
+                      className={`bg-card/50 border-border/50 hover:bg-card/70 rounded-none backdrop-blur-sm transition-all duration-300 ${
                         selectedVault === vault.id
-                          ? "border-primary ring-primary/30 ring-2 shadow-lg shadow-primary/20"
+                          ? "border-primary ring-primary/30 shadow-primary/20 shadow-lg ring-2"
                           : "border-border/50"
                       }`}
                       onClick={() => setSelectedVault(vault.id)}
@@ -241,19 +245,8 @@ export default function BattleDetailPage() {
                       <CardContent className="p-6">
                         <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center space-x-4">
-                            <div className="relative">
-                              <div
-                                className="flex h-12 w-12 items-center justify-center text-lg font-bold text-white rounded-lg"
-                                style={{ backgroundColor: vault.color }}
-                              >
-                                #{index + 1}
-                              </div>
-                              {index === 0 && (
-                                <TrophyIcon className="absolute -top-2 -right-2 h-6 w-6 text-primary" />
-                              )}
-                            </div>
                             <div>
-                              <h3 className="font-cirka text-xl font-bold text-white">
+                              <h3 className="font-cirka text-2xl font-bold text-white">
                                 {vault.name}
                               </h3>
                               <p className="text-sm text-white/60">
@@ -336,8 +329,8 @@ export default function BattleDetailPage() {
                           </p>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="border-primary text-primary hover:bg-primary hover:text-black font-semibold transition-all duration-300"
+                            variant="default"
+                            className="border-primary hover:bg-primary/80 cursor-pointer font-semibold text-black transition-all duration-300 hover:text-black"
                           >
                             Enter Battle
                           </Button>
@@ -351,11 +344,13 @@ export default function BattleDetailPage() {
               {/* Right Column - Arena Stats & Vault Spotlight */}
               <div className="space-y-6">
                 {/* Arena Stats */}
-                <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
                       <ChartBarIcon className="text-primary mr-2 h-5 w-5" />
-                      <span className="text-white font-bold">Arena Statistics</span>
+                      <span className="font-bold text-white">
+                        Arena Statistics
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -372,8 +367,12 @@ export default function BattleDetailPage() {
                       <span className="font-bold text-white">105</span>
                     </div>
                     <div className="flex justify-between border-t border-white/20 pt-3">
-                      <span className="text-primary font-semibold">Prize Pool</span>
-                      <span className="text-primary font-bold text-lg">$21.2K</span>
+                      <span className="text-primary font-semibold">
+                        Prize Pool
+                      </span>
+                      <span className="text-primary text-lg font-bold">
+                        $21.2K
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/60">Battle Duration</span>
@@ -383,11 +382,13 @@ export default function BattleDetailPage() {
                 </Card>
 
                 {/* Leading Vault Info */}
-                <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
                       <TrophyIcon className="text-primary mr-2 h-5 w-5" />
-                      <span className="text-white font-bold">Leading Vault</span>
+                      <span className="font-bold text-white">
+                        Leading Vault
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="text-center">
@@ -398,7 +399,7 @@ export default function BattleDetailPage() {
                       <p className="text-primary text-lg font-semibold">
                         Currently Leading
                       </p>
-                      <div className="bg-primary/10 border-primary/20 mt-4 border p-4 rounded-lg">
+                      <div className="bg-primary/10 border-primary/20 mt-4 border p-4">
                         <div className="mb-1 text-3xl font-bold text-green-400">
                           +{sortedVaults[0]?.performance}%
                         </div>
@@ -423,25 +424,33 @@ export default function BattleDetailPage() {
                       </div>
                     </div>
 
-                    <Button className="bg-primary hover:bg-primary/80 w-full font-bold text-black transition-all duration-300 hover:shadow-lg hover:shadow-primary/30">
+                    <Button className="bg-primary hover:bg-primary/80 hover:shadow-primary/30 w-full font-bold text-black transition-all duration-300 hover:shadow-lg">
                       Stake with Leader
                     </Button>
                   </CardContent>
                 </Card>
 
                 {/* AI Commentary */}
-                <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
-                      <span className="text-white font-bold">Battle Commentary</span>
+                      <span className="font-bold text-white">
+                        Battle Commentary
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 text-sm">
                       <p className="text-white/80 italic">
-                        &ldquo;<span className="text-green-400">Solana DCA</span> dominates with <span className="text-primary">15.2% gains</span>, while <span className="text-blue-400">Raydium DCA</span> trails at <span className="text-blue-400">9.5%</span> — the gap widens as the battle intensifies!&rdquo;
+                        &ldquo;
+                        <span className="text-green-400">Solana DCA</span>{" "}
+                        dominates with{" "}
+                        <span className="text-primary">15.2% gains</span>, while{" "}
+                        <span className="text-blue-400">Raydium DCA</span>{" "}
+                        trails at <span className="text-blue-400">9.5%</span> —
+                        the gap widens as the battle intensifies!&rdquo;
                       </p>
-                      <p className="text-xs text-primary/80 font-semibold">
+                      <p className="text-primary/80 text-xs font-semibold">
                         AI Battle Analyst • Live Updates
                       </p>
                     </div>

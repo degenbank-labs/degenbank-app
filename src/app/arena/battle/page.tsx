@@ -143,13 +143,13 @@ export default function BattleArenaPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="h-screen w-full overflow-hidden bg-black text-white">
       <MainNavbar />
 
       {/* Fullscreen Cube Loader */}
       <CubeLoader isVisible={isLoading} />
 
-      <div className="relative overflow-hidden">
+      <div className="relative flex h-full flex-col overflow-hidden">
         {/* Background Light Rays */}
         <div className="absolute inset-0 z-0">
           <LightRays
@@ -169,7 +169,7 @@ export default function BattleArenaPage() {
         </div>
 
         {/* Main Content */}
-        <div className="relative z-10">
+        <div className="relative z-10 flex h-full flex-col">
           {/* Header Section */}
           <div className="container mx-auto px-4 pt-8 pb-6">
             <div className="mb-8 text-center">
@@ -189,7 +189,7 @@ export default function BattleArenaPage() {
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Badge
                   variant="outline"
-                  className="border-primary text-primary px-4 py-2"
+                  className="border-primary text-primary rounded-none px-4 py-2"
                 >
                   <TrophyIcon className="mr-2 h-4 w-4" />
                   {
@@ -199,7 +199,7 @@ export default function BattleArenaPage() {
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="border-yellow-400 px-4 py-2 text-yellow-400"
+                  className="text-profit border-profit rounded-none px-4 py-2"
                 >
                   <CurrencyDollarIcon className="mr-2 h-4 w-4" />$
                   {(
@@ -209,7 +209,7 @@ export default function BattleArenaPage() {
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="border-blue-400 px-4 py-2 text-blue-400"
+                  className="text-purple rounded-none border-purple-400 bg-transparent px-4 py-2"
                 >
                   <UsersIcon className="mr-2 h-4 w-4" />
                   {arenas.reduce((sum, a) => sum + a.participants, 0)} Total
@@ -219,181 +219,90 @@ export default function BattleArenaPage() {
             </div>
           </div>
 
-          {/* Main Arena Grid */}
-          <div className="container mx-auto px-4 pb-12">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-              {/* Left Column - Arena Cubes */}
-              <div className="flex justify-center lg:col-span-2">
-                <div className="relative">
-                  <Cubes
-                    gridSize={2}
-                    cubeSize={150}
-                    maxAngle={60}
-                    radius={12}
-                    easing="power2.out"
-                    duration={{ enter: 0.2, leave: 0.2 }}
-                    borderStyle="2px solid #6fb7a5"
-                    faceColor="transparent"
-                    rippleColor="#6fb7a5"
-                    rippleSpeed={1.2}
-                    autoAnimate={false}
-                    rippleOnClick={true}
-                    cellGap={60}
-                    arenaData={arenas}
-                    onCubeClick={handleCubeClick}
-                    onCubeHover={handleCubeHover}
-                  />
-                </div>
-              </div>
+          {/* Main Arena Grid - Full Height Container */}
+          <div className="relative flex flex-1 items-center justify-center px-4">
+            {/* Centered Arena Cubes */}
+            <div className="w-fit">
+              <Cubes
+                gridSize={2}
+                cubeSize={150}
+                maxAngle={60}
+                radius={12}
+                easing="power1.out"
+                duration={{ enter: 0.05, leave: 0.1 }}
+                borderStyle="2px solid #6fb7a5"
+                faceColor="transparent"
+                rippleColor="#6fb7a5"
+                rippleSpeed={1.5}
+                autoAnimate={false}
+                rippleOnClick={true}
+                cellGap={60}
+                arenaData={arenas}
+                onCubeClick={handleCubeClick}
+                onCubeHover={handleCubeHover}
+              />
+            </div>
 
-              {/* Right Column - Arena Details */}
-              <div className="space-y-6">
-                {currentArena ? (
-                  <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="mb-4">
-                        <h3 className="font-cirka mb-2 text-2xl font-bold text-white">
-                          {currentArena.name}
-                        </h3>
-                        <p className="mb-4 text-sm text-white/60">
-                          {currentArena.description}
-                        </p>
-
-                        <div className="mb-4 flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={getStatusColor(currentArena.status)}
-                          >
-                            {currentArena.status}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className="border-blue-400 px-2 py-1 text-xs text-blue-400"
-                          >
-                            <ClockIcon className="mr-1 h-3 w-3" />
-                            {currentArena.timeRemaining}
-                          </Badge>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-white/60">Total TVL</p>
-                            <p className="font-bold text-white">
-                              ${(currentArena.totalTVL / 1000).toFixed(0)}K
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-white/60">Prize Pool</p>
-                            <p className="font-bold text-white">
-                              ${(currentArena.prizePool / 1000).toFixed(0)}K
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-white/60">Active Vaults</p>
-                            <p className="font-bold text-white">
-                              {currentArena.activeVaults}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-white/60">Participants</p>
-                            <p className="font-bold text-white">
-                              {currentArena.participants}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <button
-                          onClick={() =>
-                            handleCubeClick(
-                              currentArena,
-                              currentArena.cubePosition.row,
-                              currentArena.cubePosition.col
-                            )
-                          }
-                          className="bg-primary hover:bg-primary/80 hover:shadow-primary/30 w-full px-6 py-3 font-bold text-black transition-all duration-300 hover:shadow-lg"
-                        >
-                          Enter Arena
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
-                    <CardContent className="p-6 text-center">
-                      <div className="mb-4">
-                        <TrophyIcon className="text-primary/60 mx-auto mb-4 h-12 w-12" />
-                        <h3 className="font-cirka mb-2 text-xl font-bold text-white">
-                          Select an Arena
-                        </h3>
-                        <p className="text-sm text-white/60">
-                          Hover over the cubes to explore different battle
-                          arenas. Each arena features unique strategies and
-                          competitions.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Total Arenas</span>
-                          <span className="text-white">{arenas.length}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Active Battles</span>
-                          <span className="text-green-400">
-                            {
-                              arenas.filter(
-                                (a) => a.status === "Ongoing Battle"
-                              ).length
-                            }
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-white/60">Coming Soon</span>
-                          <span className="text-yellow-400">
-                            {
-                              arenas.filter(
-                                (a) =>
-                                  a.status === "Coming Soon" ||
-                                  a.status === "Starting Soon"
-                              ).length
-                            }
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Instructions Card */}
-                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
+            {/* Selected Arena Details - Responsive positioning */}
+            {currentArena && (
+              <div className="animate-in slide-in-from-right-5 absolute top-1/2 right-80 z-50 w-80 max-w-[calc(100vw-32px)] -translate-y-1/2 transform duration-300 ease-out">
+                <Card className="bg-card/95 border-border/50 rounded-none shadow-2xl backdrop-blur-md">
                   <CardContent className="p-6">
-                    <h4 className="mb-3 font-bold text-white">How to Play</h4>
-                    <div className="space-y-2 text-sm text-white/80">
-                      <div className="flex items-start gap-2">
-                        <span className="text-primary font-bold">1.</span>
-                        <span>
-                          Hover over cubes to explore different arenas
-                        </span>
+                    <div className="mb-4">
+                      <h3 className="font-cirka mb-2 text-2xl font-bold text-white">
+                        {currentArena.name}
+                      </h3>
+                      <p className="mb-4 text-sm text-white/60">
+                        {currentArena.description}
+                      </p>
+
+                      <div className="mb-4 flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`${getStatusColor(currentArena.status)} rounded-none`}
+                        >
+                          {currentArena.status}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="rounded-none border-blue-400 px-2 py-1 text-xs text-blue-400"
+                        >
+                          <ClockIcon className="mr-1 h-3 w-3" />
+                          {currentArena.timeRemaining}
+                        </Badge>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-primary font-bold">2.</span>
-                        <span>Click on an arena cube to enter the battle</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-primary font-bold">3.</span>
-                        <span>Choose a vault manager to stake with</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-primary font-bold">4.</span>
-                        <span>Watch the battle unfold and earn rewards</span>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-white/60">Total TVL</p>
+                          <p className="font-bold text-white">
+                            ${(currentArena.totalTVL / 1000).toFixed(0)}K
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-white/60">Prize Pool</p>
+                          <p className="font-bold text-white">
+                            ${(currentArena.prizePool / 1000).toFixed(0)}K
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-white/60">Active Vaults</p>
+                          <p className="font-bold text-white">
+                            {currentArena.activeVaults}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-white/60">Participants</p>
+                          <p className="font-bold text-white">
+                            {currentArena.participants}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
