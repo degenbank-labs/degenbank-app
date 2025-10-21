@@ -1,398 +1,402 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  TrophyIcon, 
-  ClockIcon, 
-  ShieldCheckIcon, 
-  FlameIcon, 
-  EyeIcon,
-  SwordIcon,
-  CrownIcon,
-  ZapIcon,
-  TargetIcon
-} from 'lucide-react'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MainNavbar } from "@/components/main-navbar";
+import LightRays from "@/components/ui/light-rays";
+import Cubes from "@/components/ui/cubes";
+import CubeLoader from "@/components/ui/cube-loader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  TrophyIcon,
+  CurrencyDollarIcon,
+  UsersIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
 
-// Mock data for battle arenas
-const ongoingBattles = [
+interface ArenaData {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  phase: string;
+  timeRemaining: string;
+  totalTVL: number;
+  activeVaults: number;
+  participants: number;
+  prizePool: number;
+  description: string;
+  color: string;
+  cubePosition: { row: number; col: number };
+}
+
+// Arena data based on project.md
+const arenas: ArenaData[] = [
   {
-    id: 1,
-    name: "DCA Arena - Phase #1",
-    status: "ongoing",
+    id: "dca-arena-1",
+    name: "DCA Arena #1",
+    type: "DCA Strategy",
+    status: "Ongoing Battle",
     phase: "Battle Phase",
-    timeRemaining: "5 days 12 hours",
-    totalTVL: 150000,
-    participants: 3,
-    vaults: [
-      {
-        id: 1,
-        name: "Solana DCA",
-        manager: "The Scientist",
-        strategy: "DCA into SOL with weekly rebalancing",
-        tvl: 50000,
-        roi: 12.5,
-        risk: "medium",
-        position: 1,
-        volatility: 8.2,
-        isDisqualified: false
-      },
-      {
-        id: 2,
-        name: "BONK DCA",
-        manager: "Degen Master",
-        strategy: "Aggressive BONK accumulation",
-        tvl: 45000,
-        roi: 8.3,
-        risk: "high",
-        position: 2,
-        volatility: 15.7,
-        isDisqualified: false
-      },
-      {
-        id: 3,
-        name: "Raydium DCA",
-        manager: "The Banker",
-        strategy: "Conservative RAY farming",
-        tvl: 55000,
-        roi: 6.8,
-        risk: "low",
-        position: 3,
-        volatility: 4.1,
-        isDisqualified: false
-      }
-    ]
-  }
-]
-
-const openDeposits = [
-  {
-    id: 2,
-    name: "Lending Arena",
-    status: "open",
-    phase: "Stake Phase",
-    timeRemaining: "2 days to start",
-    totalTVL: 0,
-    participants: 3,
-    vaults: [
-      {
-        id: 4,
-        name: "Jupiter USDC Vault",
-        manager: "Yield Hunter",
-        strategy: "Deposit USDC in Jupiter lending",
-        tvl: 0,
-        expectedROI: "8-12%",
-        risk: "low"
-      },
-      {
-        id: 5,
-        name: "Drift USDC Vault",
-        manager: "Risk Taker",
-        strategy: "Deposit USDC in Drift protocol",
-        tvl: 0,
-        expectedROI: "10-15%",
-        risk: "medium"
-      },
-      {
-        id: 6,
-        name: "Kamino USDC Vault",
-        manager: "Stable Genius",
-        strategy: "Deposit USDC in Kamino lending",
-        tvl: 0,
-        expectedROI: "7-10%",
-        risk: "low"
-      }
-    ]
+    timeRemaining: "12d 14h 32m",
+    totalTVL: 281000,
+    activeVaults: 3,
+    participants: 105,
+    prizePool: 21200,
+    description:
+      "Dollar Cost Averaging strategies compete for the highest yield",
+    color: "#6fb7a5",
+    cubePosition: { row: 0, col: 0 },
   },
   {
-    id: 3,
-    name: "RWA VS Degen",
-    status: "open",
+    id: "lending-arena-1",
+    name: "Lending Arena #1",
+    type: "Lending Strategy",
+    status: "Open Deposit",
     phase: "Stake Phase",
-    timeRemaining: "5 days to start",
+    timeRemaining: "2d 8h 15m",
+    totalTVL: 450000,
+    activeVaults: 5,
+    participants: 78,
+    prizePool: 35000,
+    description: "Lending protocols battle for the best risk-adjusted returns",
+    color: "#FB605C",
+    cubePosition: { row: 0, col: 1 },
+  },
+  {
+    id: "rwa-vs-degen-1",
+    name: "RWA vs Degen #1",
+    type: "Mixed Strategy",
+    status: "Starting Soon",
+    phase: "Registration",
+    timeRemaining: "5d 12h 45m",
     totalTVL: 0,
-    participants: 2,
-    vaults: [
-      {
-        id: 7,
-        name: "RWA Vault",
-        manager: "Traditional Trader",
-        strategy: "70% T-bills + 30% DeFi stable yield",
-        tvl: 0,
-        expectedROI: "6-9%",
-        risk: "low"
-      },
-      {
-        id: 8,
-        name: "Degen Vault",
-        manager: "Memecoin Warrior",
-        strategy: "50% SOL/USDC LP + 30% Drift + 20% memecoins",
-        tvl: 0,
-        expectedROI: "15-25%",
-        risk: "high"
-      }
-    ]
-  }
-]
+    activeVaults: 0,
+    participants: 23,
+    prizePool: 50000,
+    description:
+      "Real World Assets vs Degen strategies in the ultimate showdown",
+    color: "#FFB800",
+    cubePosition: { row: 1, col: 0 },
+  },
+  {
+    id: "yield-farming-1",
+    name: "Yield Farming Arena #1",
+    type: "Yield Farming",
+    status: "Coming Soon",
+    phase: "Preparation",
+    timeRemaining: "14d 6h 30m",
+    totalTVL: 0,
+    activeVaults: 0,
+    participants: 0,
+    prizePool: 75000,
+    description: "Advanced yield farming strategies compete for maximum APY",
+    color: "#9333EA",
+    cubePosition: { row: 1, col: 1 },
+  },
+];
 
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+export default function BattleArenaPage() {
+  const router = useRouter();
+  const [hoveredArena, setHoveredArena] = useState<string | null>(null);
+  const [selectedCube, setSelectedCube] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-const getRiskColor = (risk: string) => {
-  switch (risk) {
-    case 'low': return 'bg-green-100 text-green-800'
-    case 'medium': return 'bg-yellow-100 text-yellow-800'
-    case 'high': return 'bg-red-100 text-red-800'
-    default: return 'bg-gray-100 text-gray-800'
-  }
-}
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Ongoing Battle":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "Open Deposit":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "Starting Soon":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+      case "Coming Soon":
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+    }
+  };
 
-const getPositionIcon = (position: number) => {
-  switch (position) {
-    case 1: return <CrownIcon className="h-4 w-4 text-yellow-500" />
-    case 2: return <TrophyIcon className="h-4 w-4 text-gray-400" />
-    case 3: return <TargetIcon className="h-4 w-4 text-orange-500" />
-    default: return null
-  }
-}
+  const handleCubeClick = (arena: ArenaData, row: number, col: number) => {
+    setIsLoading(true);
 
-export default function BattlePage() {
-  const [selectedTab, setSelectedTab] = useState("ongoing")
+    // Simulate loading time before navigation
+    setTimeout(() => {
+      router.push(`/arena/battle/${arena.id}`);
+    }, 2000);
+  };
+
+  const handleCubeHover = (
+    arena: ArenaData | null,
+    row: number,
+    col: number
+  ) => {
+    setHoveredArena(arena ? arena.id : null);
+  };
+
+  const currentArena = hoveredArena
+    ? arenas.find((a) => a.id === hoveredArena)
+    : null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-      {/* Hero Section */}
-      <div className="text-center space-y-4 py-8">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <SwordIcon className="h-8 w-8 text-red-500" />
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-            Yield Arena
-          </h1>
-          <SwordIcon className="h-8 w-8 text-red-500" />
+    <div className="min-h-screen bg-black text-white">
+      <MainNavbar />
+
+      {/* Fullscreen Cube Loader */}
+      <CubeLoader isVisible={isLoading} />
+
+      <div className="relative overflow-hidden">
+        {/* Background Light Rays */}
+        <div className="absolute inset-0 z-0">
+          <LightRays
+            raysOrigin="top-center"
+            raysColor="#6fb7a5"
+            raysSpeed={0.6}
+            lightSpread={0.6}
+            rayLength={5.0}
+            pulsating={true}
+            fadeDistance={2.0}
+            followMouse={false}
+            mouseInfluence={0.0}
+            noiseAmount={0.012}
+            distortion={0.008}
+            className="opacity-80"
+          />
         </div>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Welcome to the arena, gladiators. Vaults clash, strategies collide. 
-          Degens stake with diamond hands. Only the sharpest minds farm the fattest yields.
-        </p>
-        <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
-          <span className="flex items-center space-x-1">
-            <ZapIcon className="h-4 w-4" />
-            <span>Every APY&apos;s a flex</span>
-          </span>
-          <span>•</span>
-          <span className="flex items-center space-x-1">
-            <FlameIcon className="h-4 w-4" />
-            <span>Every epoch&apos;s a bloodbath</span>
-          </span>
-          <span>•</span>
-          <span>No losses. Just on-chain dominance.</span>
-        </div>
-      </div>
 
-      {/* Arena Tabs */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="ongoing" className="flex items-center space-x-2">
-            <FlameIcon className="h-4 w-4" />
-            <span>Ongoing Battles</span>
-          </TabsTrigger>
-          <TabsTrigger value="open" className="flex items-center space-x-2">
-            <ShieldCheckIcon className="h-4 w-4" />
-            <span>Open for Deposits</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* Main Content */}
+        <div className="relative z-10">
+          {/* Header Section */}
+          <div className="container mx-auto px-4 pt-8 pb-6">
+            <div className="mb-8 text-center">
+              <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
+                <span className="text-white">Battle </span>
+                <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
+                  Arenas
+                </span>
+              </h1>
 
-        {/* Ongoing Battles */}
-        <TabsContent value="ongoing" className="space-y-6">
-          {ongoingBattles.map((arena) => (
-            <Card key={arena.id} className="border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FlameIcon className="h-5 w-5 text-red-500" />
-                      <span>{arena.name}</span>
-                      <Badge variant="destructive">{arena.phase}</Badge>
-                    </CardTitle>
-                    <CardDescription className="flex items-center space-x-4 mt-2">
-                      <span className="flex items-center space-x-1">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>{arena.timeRemaining}</span>
-                      </span>
-                      <span>Total TVL: {formatCurrency(arena.totalTVL)}</span>
-                      <span>{arena.participants} Gladiators</span>
-                    </CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <EyeIcon className="h-4 w-4 mr-2" />
-                    Spectate
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-lg">Live Leaderboard</h4>
-                  <div className="grid gap-4">
-                    {arena.vaults.map((vault) => (
-                      <Card key={vault.id} className="border-l-4 border-l-blue-500">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              {getPositionIcon(vault.position)}
-                              <div>
-                                <h5 className="font-semibold">{vault.name}</h5>
-                                <p className="text-sm text-muted-foreground">
-                                  Managed by {vault.manager}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {vault.strategy}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right space-y-1">
-                              <div className="flex items-center space-x-2">
-                                <Badge className={getRiskColor(vault.risk)}>
-                                  {vault.risk} risk
-                                </Badge>
-                                <span className="font-bold text-lg text-green-600">
-                                  +{vault.roi}%
-                                </span>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                TVL: {formatCurrency(vault.tvl)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Volatility: {vault.volatility}%
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span>Performance</span>
-                              <span>{vault.roi}% ROI</span>
-                            </div>
-                            <Progress value={vault.roi} className="h-2" />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
+              <p className="mx-auto mb-8 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
+                Choose your arena. Each cube represents a different battle where
+                vault managers compete for the highest returns. Select your
+                strategy and join the competition.
+              </p>
 
-        {/* Open Deposits */}
-        <TabsContent value="open" className="space-y-6">
-          {openDeposits.map((arena) => (
-            <Card key={arena.id} className="border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <ShieldCheckIcon className="h-5 w-5 text-green-500" />
-                      <span>{arena.name}</span>
-                      <Badge variant="secondary">{arena.phase}</Badge>
-                    </CardTitle>
-                    <CardDescription className="flex items-center space-x-4 mt-2">
-                      <span className="flex items-center space-x-1">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>{arena.timeRemaining}</span>
-                      </span>
-                      <span>{arena.participants} Vaults Ready</span>
-                    </CardDescription>
-                  </div>
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    Enter Arena
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-lg">Choose Your Vault</h4>
-                  <div className="grid gap-4">
-                    {arena.vaults.map((vault) => (
-                      <Card key={vault.id} className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h5 className="font-semibold">{vault.name}</h5>
-                              <p className="text-sm text-muted-foreground">
-                                Managed by {vault.manager}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {vault.strategy}
-                              </p>
-                            </div>
-                            <div className="text-right space-y-1">
-                              <div className="flex items-center space-x-2">
-                                <Badge className={getRiskColor(vault.risk)}>
-                                  {vault.risk} risk
-                                </Badge>
-                                <span className="font-bold text-lg text-blue-600">
-                                  {vault.expectedROI}
-                                </span>
-                              </div>
-                              <Button size="sm" variant="outline">
-                                Stake Now
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
-      </Tabs>
-
-      {/* AI Commentary Section */}
-      <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <ZapIcon className="h-5 w-5 text-purple-500" />
-            <span>Arena Commentary</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="p-3 bg-white rounded-lg border-l-4 border-l-purple-500">
-              <p className="text-sm italic">
-                &quot;The Scientist maintains the lead with steady 12.5% gains, but Degen Master&apos;s volatility 
-                spikes to 15.7% — one wrong trade could trigger DQ. The Banker plays it safe with 
-                conservative 6.8% returns, staying well below the danger zone.&quot;
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                AI Analysis • Updated 2 hours ago
-              </p>
-            </div>
-            <div className="p-3 bg-white rounded-lg border-l-4 border-l-orange-500">
-              <p className="text-sm italic">
-                &quot;Market volatility increasing. BONK DCA vault showing signs of stress. 
-                All eyes on the 10% loss threshold — any vault hitting this mark gets 
-                automatically disqualified from the current epoch.&quot;
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Risk Alert • Updated 4 hours ago
-              </p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <Badge
+                  variant="outline"
+                  className="border-primary text-primary px-4 py-2"
+                >
+                  <TrophyIcon className="mr-2 h-4 w-4" />
+                  {
+                    arenas.filter((a) => a.status === "Ongoing Battle").length
+                  }{" "}
+                  Active Battles
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-yellow-400 px-4 py-2 text-yellow-400"
+                >
+                  <CurrencyDollarIcon className="mr-2 h-4 w-4" />$
+                  {(
+                    arenas.reduce((sum, a) => sum + a.prizePool, 0) / 1000
+                  ).toFixed(0)}
+                  K Total Prizes
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-blue-400 px-4 py-2 text-blue-400"
+                >
+                  <UsersIcon className="mr-2 h-4 w-4" />
+                  {arenas.reduce((sum, a) => sum + a.participants, 0)} Total
+                  Participants
+                </Badge>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Main Arena Grid */}
+          <div className="container mx-auto px-4 pb-12">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              {/* Left Column - Arena Cubes */}
+              <div className="flex justify-center lg:col-span-2">
+                <div className="relative">
+                  <Cubes
+                    gridSize={2}
+                    cubeSize={150}
+                    maxAngle={60}
+                    radius={12}
+                    easing="power2.out"
+                    duration={{ enter: 0.2, leave: 0.2 }}
+                    borderStyle="2px solid #6fb7a5"
+                    faceColor="transparent"
+                    rippleColor="#6fb7a5"
+                    rippleSpeed={1.2}
+                    autoAnimate={false}
+                    rippleOnClick={true}
+                    cellGap={60}
+                    arenaData={arenas}
+                    onCubeClick={handleCubeClick}
+                    onCubeHover={handleCubeHover}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column - Arena Details */}
+              <div className="space-y-6">
+                {currentArena ? (
+                  <Card className="bg-card/50 border-border/50 backdrop-blur-sm">
+                    <CardContent className="p-6">
+                      <div className="mb-4">
+                        <h3 className="font-cirka mb-2 text-2xl font-bold text-white">
+                          {currentArena.name}
+                        </h3>
+                        <p className="mb-4 text-sm text-white/60">
+                          {currentArena.description}
+                        </p>
+
+                        <div className="mb-4 flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={getStatusColor(currentArena.status)}
+                          >
+                            {currentArena.status}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="border-blue-400 px-2 py-1 text-xs text-blue-400"
+                          >
+                            <ClockIcon className="mr-1 h-3 w-3" />
+                            {currentArena.timeRemaining}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-white/60">Total TVL</p>
+                            <p className="font-bold text-white">
+                              ${(currentArena.totalTVL / 1000).toFixed(0)}K
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/60">Prize Pool</p>
+                            <p className="font-bold text-white">
+                              ${(currentArena.prizePool / 1000).toFixed(0)}K
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/60">Active Vaults</p>
+                            <p className="font-bold text-white">
+                              {currentArena.activeVaults}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/60">Participants</p>
+                            <p className="font-bold text-white">
+                              {currentArena.participants}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <button
+                          onClick={() =>
+                            handleCubeClick(
+                              currentArena,
+                              currentArena.cubePosition.row,
+                              currentArena.cubePosition.col
+                            )
+                          }
+                          className="bg-primary hover:bg-primary/80 hover:shadow-primary/30 w-full px-6 py-3 font-bold text-black transition-all duration-300 hover:shadow-lg"
+                        >
+                          Enter Arena
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
+                    <CardContent className="p-6 text-center">
+                      <div className="mb-4">
+                        <TrophyIcon className="text-primary/60 mx-auto mb-4 h-12 w-12" />
+                        <h3 className="font-cirka mb-2 text-xl font-bold text-white">
+                          Select an Arena
+                        </h3>
+                        <p className="text-sm text-white/60">
+                          Hover over the cubes to explore different battle
+                          arenas. Each arena features unique strategies and
+                          competitions.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Total Arenas</span>
+                          <span className="text-white">{arenas.length}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Active Battles</span>
+                          <span className="text-green-400">
+                            {
+                              arenas.filter(
+                                (a) => a.status === "Ongoing Battle"
+                              ).length
+                            }
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-white/60">Coming Soon</span>
+                          <span className="text-yellow-400">
+                            {
+                              arenas.filter(
+                                (a) =>
+                                  a.status === "Coming Soon" ||
+                                  a.status === "Starting Soon"
+                              ).length
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Instructions Card */}
+                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
+                  <CardContent className="p-6">
+                    <h4 className="mb-3 font-bold text-white">How to Play</h4>
+                    <div className="space-y-2 text-sm text-white/80">
+                      <div className="flex items-start gap-2">
+                        <span className="text-primary font-bold">1.</span>
+                        <span>
+                          Hover over cubes to explore different arenas
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-primary font-bold">2.</span>
+                        <span>Click on an arena cube to enter the battle</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-primary font-bold">3.</span>
+                        <span>Choose a vault manager to stake with</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-primary font-bold">4.</span>
+                        <span>Watch the battle unfold and earn rewards</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  )
+  );
 }

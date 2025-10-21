@@ -73,8 +73,8 @@ interface StakerEntry {
 
 // Generate Solana wallet addresses with seed for consistency
 const generateSolanaAddress = (seed: number): string => {
-  const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let result = '';
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let result = "";
   // Use seed-based generation for consistent results
   for (let i = 0; i < 44; i++) {
     const index = (seed + i * 7) % chars.length;
@@ -253,7 +253,7 @@ const generateManagerData = (): LeaderboardEntry[] => {
       rank: i,
       manager: `${randomManager}${i}`,
       managerFullAddress: generateSolanaAddress(1000 + i),
-      managerType: (seed % 10) > 7 ? "ecosystem" : "verified",
+      managerType: seed % 10 > 7 ? "ecosystem" : "verified",
       totalTVL: tvl,
       totalPnL: pnl,
       winRate: winRate,
@@ -261,9 +261,9 @@ const generateManagerData = (): LeaderboardEntry[] => {
       vaultCount: ((seed * 13) % 4) + 1,
       followers: ((seed * 17) % 1000) + 100,
       performance: {
-        daily: ((seed * 19) % 200 - 100) / 100,
-        weekly: ((seed * 23) % 800 - 200) / 100,
-        monthly: ((seed * 29) % 2000 - 500) / 100,
+        daily: (((seed * 19) % 200) - 100) / 100,
+        weekly: (((seed * 23) % 800) - 200) / 100,
+        monthly: (((seed * 29) % 2000) - 500) / 100,
         quarterly: apy,
       },
       topVault: {
@@ -341,9 +341,9 @@ const generateStakerData = (): StakerEntry[] => {
       vaultCount: ((seed * 19) % 3) + 1,
       joinDate: `2024-${String(((seed * 23) % 12) + 1).padStart(2, "0")}-${String(((seed * 29) % 28) + 1).padStart(2, "0")}`,
       performance: {
-        daily: ((seed * 31) % 120 - 20) / 100,
-        weekly: ((seed * 37) % 400 - 100) / 100,
-        monthly: ((seed * 41) % 1200 - 300) / 100,
+        daily: (((seed * 31) % 120) - 20) / 100,
+        weekly: (((seed * 37) % 400) - 100) / 100,
+        monthly: (((seed * 41) % 1200) - 300) / 100,
         quarterly: apy,
       },
       favoriteVault: {

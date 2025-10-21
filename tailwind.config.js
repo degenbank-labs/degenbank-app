@@ -16,6 +16,9 @@ module.exports = {
         profit: '#34CB88',
         loss: '#FB605C',
       },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
     },
   },
   plugins: [],
