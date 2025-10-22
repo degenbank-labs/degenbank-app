@@ -2,18 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MainNavbar } from "@/components/main-navbar";
-import LightRays from "@/components/ui/light-rays";
-import Cubes from "@/components/ui/cubes";
-import CubeLoader from "@/components/ui/cube-loader";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   TrophyIcon,
   CurrencyDollarIcon,
   UsersIcon,
   ClockIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { MainNavbar } from "@/components/main-navbar";
+import Cubes from "@/components/ui/cubes";
+import LightRays from "@/components/ui/light-rays";
+import CubeLoader from "@/components/ui/cube-loader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { useBattles } from "@/hooks/useBattles";
 
 interface ArenaData {
   id: string;
@@ -105,6 +109,9 @@ export default function BattleArenaPage() {
     col: number;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Use battles hook for real data
+  const { battles: arenas, stats, loading, error, refreshBattles } = useBattles();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -141,6 +148,75 @@ export default function BattleArenaPage() {
   const currentArena = hoveredArena
     ? arenas.find((a) => a.id === hoveredArena)
     : null;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="h-screen w-full overflow-hidden bg-black text-white">
+        <MainNavbar />
+        <div className="relative flex h-full flex-col overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <LightRays
+              raysOrigin="top-center"
+              raysColor="#6fb7a5"
+              raysSpeed={0.6}
+              lightSpread={0.6}
+              rayLength={5.0}
+              pulsating={true}
+              fadeDistance={2.0}
+              followMouse={false}
+              mouseInfluence={0.0}
+              noiseAmount={0.012}
+              distortion={0.008}
+              className="opacity-80"
+            />
+          </div>
+          <div className="relative z-10 flex h-full items-center justify-center">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-white/80">Loading battle arenas...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-screen w-full overflow-hidden bg-black text-white">
+        <MainNavbar />
+        <div className="relative flex h-full flex-col overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <LightRays
+              raysOrigin="top-center"
+              raysColor="#6fb7a5"
+              raysSpeed={0.6}
+              lightSpread={0.6}
+              rayLength={5.0}
+              pulsating={true}
+              fadeDistance={2.0}
+              followMouse={false}
+              mouseInfluence={0.0}
+              noiseAmount={0.012}
+              distortion={0.008}
+              className="opacity-80"
+            />
+          </div>
+          <div className="relative z-10 flex h-full items-center justify-center">
+            <div className="text-center space-y-4">
+              <ExclamationTriangleIcon className="h-8 w-8 mx-auto text-red-500" />
+              <p className="text-red-500">Error loading battle arenas: {error}</p>
+              <Button onClick={refreshBattles} variant="outline" className="rounded-none">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full overflow-hidden bg-black text-white">

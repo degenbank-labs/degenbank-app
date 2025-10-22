@@ -12,10 +12,12 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   EyeIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import Particles from "@/components/ui/particles";
-import { ChartArea, VaultIcon } from "lucide-react";
+import { ChartArea, VaultIcon, Loader2 } from "lucide-react";
+import { useVaults } from "@/hooks/useVaults";
 
 // Dummy data based on project.md
 const vaultsData = {
@@ -128,6 +130,8 @@ const vaultsData = {
 };
 
 export default function StrategyVaultsPage() {
+  const { vaults, stats, loading, error, refreshVaults } = useVaults();
+
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -209,7 +213,7 @@ export default function StrategyVaultsPage() {
 
   const [selectedFilter, setSelectedFilter] = useState("all");
 
-  const filteredVaults = vaultsData.vaults.filter((vault) => {
+  const filteredVaults = vaults.filter((vault) => {
     if (selectedFilter === "all") return true;
     if (selectedFilter === "verified") return vault.managerType === "verified";
     if (selectedFilter === "ecosystem")
@@ -217,8 +221,65 @@ export default function StrategyVaultsPage() {
     return true;
   });
 
-  const totalTVL = vaultsData.vaults.reduce((sum, vault) => sum + vault.tvl, 0);
-  const totalPnL = vaultsData.totalPnL;
+  const totalTVL = stats.totalTVL;
+  const totalPnL = stats.totalPnL;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="bg-background text-foreground relative min-h-screen p-6">
+        <div className="fixed inset-0 z-0">
+          <Particles
+            particleColors={["#ffffff", "#ffffff", "#ffffff"]}
+            particleCount={150}
+            particleSpread={8}
+            speed={0.05}
+            particleBaseSize={80}
+            moveParticlesOnHover={true}
+            alphaParticles={true}
+            disableRotation={false}
+            className="h-full w-full"
+          />
+        </div>
+        <div className="relative z-10 flex min-h-screen items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Loading vaults...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-background text-foreground relative min-h-screen p-6">
+        <div className="fixed inset-0 z-0">
+          <Particles
+            particleColors={["#ffffff", "#ffffff", "#ffffff"]}
+            particleCount={150}
+            particleSpread={8}
+            speed={0.05}
+            particleBaseSize={80}
+            moveParticlesOnHover={true}
+            alphaParticles={true}
+            disableRotation={false}
+            className="h-full w-full"
+          />
+        </div>
+        <div className="relative z-10 flex min-h-screen items-center justify-center">
+          <div className="text-center space-y-4">
+            <ExclamationTriangleIcon className="h-8 w-8 mx-auto text-red-500" />
+            <p className="text-red-500">Error loading vaults: {error}</p>
+            <Button onClick={refreshVaults} variant="outline" className="rounded-none">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-foreground relative min-h-screen p-6">
@@ -329,7 +390,7 @@ export default function StrategyVaultsPage() {
             onClick={() => setSelectedFilter("all")}
             className="cursor-pointer rounded-none"
           >
-            All Vaults ({vaultsData.vaults.length})
+            All Vaults ({vaults.length})
           </Button>
           <Button
             variant={selectedFilter === "verified" ? "default" : "outline"}
@@ -339,7 +400,7 @@ export default function StrategyVaultsPage() {
             <ShieldCheckIcon className="mr-2 h-4 w-4" />
             Verified Managers (
             {
-              vaultsData.vaults.filter((v) => v.managerType === "verified")
+              vaults.filter((v) => v.managerType === "verified")
                 .length
             }
             )
@@ -352,7 +413,7 @@ export default function StrategyVaultsPage() {
             <UserGroupIcon className="mr-2 h-4 w-4" />
             Ecosystem Partners (
             {
-              vaultsData.vaults.filter((v) => v.managerType === "ecosystem")
+              vaults.filter((v) => v.managerType === "ecosystem")
                 .length
             }
             )

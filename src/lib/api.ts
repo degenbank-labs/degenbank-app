@@ -40,6 +40,86 @@ export interface UpdateUserRequest {
   image?: string;
 }
 
+// Vault interfaces
+export interface Vault {
+  vault_id: string;
+  vault_type: string;
+  vault_name: string;
+  vault_image: string;
+  vault_address: string;
+  token_program: string;
+  token_address: string;
+  locked_start: string;
+  locked_end: string;
+  vault_strategy: string;
+  vault_risks: string;
+  description: string;
+  manager_id: string;
+  battle_id: number | null;
+  created_at: string;
+  is_available: boolean;
+  manager?: Manager;
+  battle?: Battle;
+}
+
+export interface GetVaultsResponse {
+  results: Vault[];
+  total: number;
+}
+
+// Battle interfaces
+export interface Battle {
+  battleId: number;
+  battleName: string;
+  battleImage: string;
+  battleDescription: string;
+  battleStart: string;
+  battleEnd: string;
+  programAddress: string;
+  treasuryAddress: string;
+  ownerAddress: string;
+  isAvailable: boolean;
+  vaults?: Vault[];
+}
+
+export interface GetBattlesResponse {
+  results: Battle[];
+  total: number;
+}
+
+// Manager interfaces
+export interface Manager {
+  manager_id: string;
+  manager_name: string;
+  manager_image: string;
+  manager_address: string;
+  manager_description: string;
+  is_kyb: boolean;
+  created_at: string;
+}
+
+export interface GetManagersResponse {
+  results: Manager[];
+  total: number;
+}
+
+// Token interfaces
+export interface Token {
+  tokenId: string;
+  tokenAddress: string;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenImage: string;
+  tokenDecimals: number;
+  network: string;
+  created_at: string;
+}
+
+export interface GetTokensResponse {
+  results: Token[];
+  total: number;
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -141,6 +221,55 @@ class ApiService {
   // Get all users
   async getAllUsers(): Promise<GetUsersResponse> {
     const response = await this.request<GetUsersResponse>('/users');
+    return response.data;
+  }
+
+  // Vault API methods
+  async getVault(id: string): Promise<Vault> {
+    const response = await this.request<Vault>(`/vault/${id}`);
+    return response.data;
+  }
+
+  async getAllVaults(skip: number = 0, limit: number = 10): Promise<GetVaultsResponse> {
+    const response = await this.request<GetVaultsResponse>(`/vault?skip=${skip}&limit=${limit}`);
+    return response.data;
+  }
+
+  // Battle API methods
+  async getBattle(id: string): Promise<Battle> {
+    const response = await this.request<Battle>(`/battle/${id}`);
+    return response.data;
+  }
+
+  async getAllBattles(skip: number = 0, limit: number = 10): Promise<GetBattlesResponse> {
+    const response = await this.request<GetBattlesResponse>(`/battle?skip=${skip}&limit=${limit}`);
+    return response.data;
+  }
+
+  // Manager API methods
+  async getManager(id: string): Promise<Manager> {
+    const response = await this.request<Manager>(`/manager/${id}`);
+    return response.data;
+  }
+
+  async getAllManagers(skip: number = 0, limit: number = 10): Promise<GetManagersResponse> {
+    const response = await this.request<GetManagersResponse>(`/manager?skip=${skip}&limit=${limit}`);
+    return response.data;
+  }
+
+  // Token API methods
+  async getToken(id: string): Promise<Token> {
+    const response = await this.request<Token>(`/token/${id}`);
+    return response.data;
+  }
+
+  async getTokenByAddress(address: string): Promise<Token> {
+    const response = await this.request<Token>(`/token/address/${address}`);
+    return response.data;
+  }
+
+  async getTokensByNetwork(network: string, skip: number = 0, limit: number = 10): Promise<Token[]> {
+    const response = await this.request<Token[]>(`/token/network/${network}?skip=${skip}&limit=${limit}`);
     return response.data;
   }
 }

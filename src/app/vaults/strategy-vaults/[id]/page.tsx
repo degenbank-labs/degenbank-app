@@ -3,16 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
-  TrophyIcon,
   ShieldCheckIcon,
   UserGroupIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
 import {
   ComposedChart,
   Area,
@@ -334,137 +335,7 @@ const getPerformanceData = (period: "14D" | "30D") => {
 };
 
 // Dummy data for vault details
-interface VaultData {
-  id: string;
-  name: string;
-  manager: string;
-  managerType: string;
-  tvl: number;
-  apy90d: number;
-  age: string;
-  strategy: string;
-  riskLevel: string;
-  depositAsset: string;
-  minDeposit: number;
-  maxDeposit?: number;
-  status: string;
-  symbolImage: string;
-  performance: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    quarterly: number;
-    yearly: number;
-  };
-  description: string;
-  strategyDetails?: string[];
-  fees: {
-    managementFee: number;
-    performanceFee: number;
-    depositFee: number;
-    withdrawalFee: number;
-  };
-  allocation?: Array<{
-    asset: string;
-    percentage: number;
-    amount: number;
-  }>;
-}
-
-const getVaultData = (id: string): VaultData | null => {
-  const vaults: Record<string, VaultData> = {
-    "solana-dca": {
-      id: "solana-dca",
-      name: "Solana DCA Vault",
-      manager: "DegenTrader",
-      managerType: "verified",
-      tvl: 12450000,
-      apy90d: 15.8,
-      age: "45 days",
-      strategy: "DCA into SOL with automated rebalancing",
-      riskLevel: "Medium",
-      depositAsset: "USDC",
-      minDeposit: 100,
-      maxDeposit: 100000,
-      status: "Active",
-      symbolImage:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.12,
-        weekly: 2.34,
-        monthly: 8.67,
-        quarterly: 15.8,
-        yearly: 45.2,
-      },
-      description:
-        "This vault implements a Dollar Cost Averaging strategy for Solana (SOL) with intelligent rebalancing mechanisms. The strategy aims to reduce volatility while capturing SOL&apos;s long-term growth potential.",
-      strategyDetails: [
-        "Daily DCA purchases of SOL using deposited USDC",
-        "Automated rebalancing based on market conditions",
-        "Risk management through position sizing",
-        "Yield optimization through staking rewards",
-      ],
-      fees: {
-        managementFee: 2.0,
-        performanceFee: 20.0,
-        depositFee: 0.0,
-        withdrawalFee: 0.5,
-      },
-      allocation: [
-        { asset: "SOL", percentage: 75, amount: 9337500 },
-        { asset: "USDC", percentage: 20, amount: 2490000 },
-        { asset: "mSOL", percentage: 5, amount: 622500 },
-      ],
-    },
-    "bonk-dca": {
-      id: "bonk-dca",
-      name: "BONK DCA Vault",
-      manager: "MemeKing",
-      managerType: "verified",
-      tvl: 8900000,
-      apy90d: 28.5,
-      age: "32 days",
-      strategy: "Aggressive DCA into BONK with momentum trading",
-      riskLevel: "High",
-      depositAsset: "USDC",
-      minDeposit: 50,
-      maxDeposit: 50000,
-      status: "Active",
-      symbolImage:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.89,
-        weekly: 5.67,
-        monthly: 18.23,
-        quarterly: 28.5,
-        yearly: 85.4,
-      },
-      description:
-        "High-risk, high-reward vault focusing on BONK token with momentum-based trading strategies. This vault leverages market volatility and meme coin momentum to generate aggressive returns through strategic DCA and momentum trading techniques.",
-      strategyDetails: [
-        "Aggressive DCA purchases during market dips",
-        "Momentum-based position sizing and timing",
-        "Dynamic rebalancing based on social sentiment",
-        "Risk management through stop-loss mechanisms",
-        "Yield farming integration for additional returns",
-      ],
-      fees: {
-        managementFee: 3.0,
-        performanceFee: 25.0,
-        depositFee: 0.0,
-        withdrawalFee: 1.0,
-      },
-      allocation: [
-        { asset: "BONK", percentage: 60, amount: 5340000 },
-        { asset: "USDC", percentage: 25, amount: 2225000 },
-        { asset: "SOL", percentage: 10, amount: 890000 },
-        { asset: "RAY", percentage: 5, amount: 445000 },
-      ],
-    },
-  };
-
-  return vaults[id] || null;
-};
+// Using VaultWithMetrics interface from useVaults hook instead of local VaultData interface
 
 export default function VaultDetailPage() {
   const params = useParams();
@@ -478,8 +349,57 @@ export default function VaultDetailPage() {
     "deposit" | "withdraw"
   >("deposit");
 
-  const vaultData = getVaultData(vaultId);
+  // Use real API data
+  const { getVaultById, loading, error } = useVaults();
+  const [vaultData, setVaultData] = useState<VaultWithMetrics | null>(null);
 
+  useEffect(() => {
+    const fetchVault = async () => {
+      if (vaultId) {
+        try {
+          const vault = await getVaultById(vaultId);
+          setVaultData(vault);
+        } catch (err) {
+          console.error("Failed to fetch vault:", err);
+        }
+      }
+    };
+    fetchVault();
+  }, [vaultId, getVaultById]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="text-primary mx-auto mb-4 h-8 w-8 animate-spin" />
+            <p className="text-neutral-400">Loading vault details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="mx-auto mb-4 h-12 w-12 text-red-500" />
+          <h1 className="mb-4 text-2xl font-bold text-white">
+            Failed to load vault
+          </h1>
+          <p className="mb-6 text-neutral-400">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Vault not found
   if (!vaultData) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -487,10 +407,10 @@ export default function VaultDetailPage() {
           <h1 className="mb-4 text-2xl font-bold text-white">
             Vault Not Found
           </h1>
-          <p className="text-muted-foreground mb-6">
+          <p className="mb-6 text-neutral-400">
             The vault you&apos;re looking for doesn&apos;t exist.
           </p>
-          <Link href="/vaults">
+          <Link href="/vaults/strategy-vaults">
             <Button>Back to Vaults</Button>
           </Link>
         </div>
@@ -611,27 +531,25 @@ export default function VaultDetailPage() {
       <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Main Header */}
         <div className="mb-6 flex flex-col items-start justify-between sm:flex-row sm:items-start">
-          <div className="flex w-full flex-col items-start space-y-3 sm:w-auto sm:flex-row sm:space-x-4 sm:space-y-0">
+          <div className="flex w-full flex-col items-start space-y-3 sm:w-auto sm:flex-row sm:space-y-0 sm:space-x-4">
             {/* Symbol Image */}
             <div className="flex-shrink-0">
-              <img
-                src={vaultData.symbolImage}
-                alt={vaultData.name}
-                className="h-12 w-12 object-cover"
-              />
+              <div className="bg-primary/20 flex h-12 w-12 items-center justify-center rounded-lg">
+                <SolanaIconSvg className="h-8 w-8" />
+              </div>
             </div>
 
             {/* Vault Info */}
             <div className="w-full sm:w-auto">
               <h1 className="mb-1 text-xl font-bold text-white sm:text-2xl">
-                {vaultData.name}
+                {vaultData.name || "Vault Name"}
               </h1>
-              <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
+              <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
                 <div className="flex items-center space-x-1">
                   <span className="text-muted-foreground">Manager:</span>
-                  {getManagerBadge(vaultData.managerType)}
+                  {getManagerBadge(vaultData.managerType || "verified")}
                   <span className="font-medium text-white">
-                    {vaultData.manager}
+                    {vaultData.manager?.manager_name || "Unknown Manager"}
                   </span>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -650,7 +568,7 @@ export default function VaultDetailPage() {
         </div>
 
         {/* Tab Menu - Stack vertically on mobile */}
-        <div className="mb-6 flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+        <div className="mb-6 flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
           <Button
             variant={activeTab === "vault-performance" ? "default" : "outline"}
             onClick={() => setActiveTab("vault-performance")}
@@ -687,34 +605,36 @@ export default function VaultDetailPage() {
         {/* Key Metrics - Responsive grid with proper borders */}
         <Card className="bg-card border-border mb-6 rounded-none">
           <div className="grid grid-cols-2 sm:grid-cols-4">
-            <div className="border-border border-b border-r px-4 py-4 sm:border-b-0 sm:px-8">
+            <div className="border-border border-r border-b px-4 py-4 sm:border-b-0 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
                 APY (90 days)
               </div>
               <div className="text-primary mt-1 text-base font-bold sm:text-lg">
-                {vaultData.apy90d}%
+                {vaultData.apy || "0.00%"}
               </div>
             </div>
-            <div className="border-border border-b px-4 py-4 sm:border-b-0 sm:border-r sm:px-8">
+            <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                Vault Age
+                Strategy
               </div>
-              <div className="mt-1 text-base font-bold text-white sm:text-lg">248 days</div>
+              <div className="mt-1 text-base font-bold text-white sm:text-lg">
+                {vaultData.strategy || "N/A"}
+              </div>
             </div>
             <div className="border-border border-r px-4 py-4 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                $ {(vaultData.tvl / 1000).toFixed(1)}K
+                $ {vaultData.tvl ? (vaultData.tvl / 1000).toFixed(1) : "0.0"}K
               </div>
             </div>
             <div className="px-4 py-4 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                Vault Capacity
+                Risk Level
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {formatPercentage(32.89)}
+                {vaultData.risk || "N/A"}
               </div>
             </div>
           </div>
@@ -738,7 +658,7 @@ export default function VaultDetailPage() {
                     <div className="flex flex-wrap gap-2 sm:gap-4">
                       <button
                         onClick={() => setSelectedChart("roi")}
-                        className={`flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                        className={`min-w-0 flex-1 px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
                           selectedChart === "roi"
                             ? "bg-primary text-black"
                             : "text-muted-foreground bg-transparent hover:text-white"
@@ -748,7 +668,7 @@ export default function VaultDetailPage() {
                       </button>
                       <button
                         onClick={() => setSelectedChart("sharePrice")}
-                        className={`flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                        className={`min-w-0 flex-1 px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
                           selectedChart === "sharePrice"
                             ? "bg-primary text-black"
                             : "text-muted-foreground bg-transparent hover:text-white"
@@ -758,7 +678,7 @@ export default function VaultDetailPage() {
                       </button>
                       <button
                         onClick={() => setSelectedChart("vaultBalance")}
-                        className={`flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                        className={`min-w-0 flex-1 px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
                           selectedChart === "vaultBalance"
                             ? "bg-primary text-black"
                             : "text-muted-foreground bg-transparent hover:text-white"
@@ -772,7 +692,7 @@ export default function VaultDetailPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => setSelectedPeriod("14D")}
-                        className={`px-3 py-1 text-xs sm:text-sm font-medium transition-colors ${
+                        className={`px-3 py-1 text-xs font-medium transition-colors sm:text-sm ${
                           selectedPeriod === "14D"
                             ? "bg-primary text-black"
                             : "text-muted-foreground bg-transparent hover:text-white"
@@ -782,7 +702,7 @@ export default function VaultDetailPage() {
                       </button>
                       <button
                         onClick={() => setSelectedPeriod("30D")}
-                        className={`px-3 py-1 text-xs sm:text-sm font-medium transition-colors ${
+                        className={`px-3 py-1 text-xs font-medium transition-colors sm:text-sm ${
                           selectedPeriod === "30D"
                             ? "bg-primary text-black"
                             : "text-muted-foreground bg-transparent hover:text-white"
@@ -793,7 +713,7 @@ export default function VaultDetailPage() {
                     </div>
 
                     {/* Chart */}
-                    <div className="h-64 sm:h-80 w-full">
+                    <div className="h-64 w-full sm:h-80">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart
                           data={chartData}
@@ -1099,11 +1019,11 @@ export default function VaultDetailPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Performance Breakdown Section */}
             <div className="border p-4 sm:p-6 lg:col-span-2">
-              <h3 className="mb-4 sm:mb-6 text-lg font-medium text-white">
+              <h3 className="mb-4 text-lg font-medium text-white sm:mb-6">
                 Performance Breakdown
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
                 {/* Left Column */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -1295,122 +1215,23 @@ export default function VaultDetailPage() {
                         <Badge
                           variant="outline"
                           className={`rounded-none ${
-                            vaultData.riskLevel === "Low"
+                            vaultData.risk === "Low"
                               ? "text-profit border-profit"
-                              : vaultData.riskLevel === "Medium"
+                              : vaultData.risk === "Medium"
                                 ? "border-yellow-400 text-yellow-400"
                                 : "text-loss border-loss"
                           }`}
                         >
-                          {vaultData.riskLevel} Risk
+                          {vaultData.risk} Risk
                         </Badge>
                       </div>
                     </div>
 
-                    {vaultData.strategyDetails && (
-                      <div>
-                        <h4 className="mb-2 text-sm font-medium text-white">
-                          Strategy Details
-                        </h4>
-                        <ul className="text-muted-foreground space-y-1 text-sm">
-                          {vaultData.strategyDetails.map((detail, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="text-primary mr-2">•</span>
-                              {detail}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {/* Strategy details section removed - not available in API */}
                   </CardContent>
                 </Card>
 
-                {/* Fees Information */}
-                <Card className="bg-card border-border rounded-none">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-lg text-white">
-                      Fee Structure
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            Management Fee
-                          </span>
-                          <span className="font-medium text-white">
-                            {vaultData.fees.managementFee}%
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            Performance Fee
-                          </span>
-                          <span className="font-medium text-white">
-                            {vaultData.fees.performanceFee}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            Deposit Fee
-                          </span>
-                          <span className="font-medium text-white">
-                            {vaultData.fees.depositFee}%
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm">
-                            Withdrawal Fee
-                          </span>
-                          <span className="font-medium text-white">
-                            {vaultData.fees.withdrawalFee}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Asset Allocation */}
-                {vaultData.allocation && (
-                  <Card className="bg-card border-border rounded-none">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg text-white">
-                        Asset Allocation
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {vaultData.allocation.map((asset, index) => (
-                          <div
-                            key={index}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="flex items-center space-x-2">
-                                <SolanaIconSvg width={20} height={20} />
-                                <span className="font-medium text-white">
-                                  {asset.asset}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <span className="text-muted-foreground text-sm">
-                                {asset.amount.toLocaleString()} SOL
-                              </span>
-                              <span className="text-primary font-medium">
-                                {asset.percentage}%
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Fees and allocation sections removed - not available in VaultWithMetrics interface */}
 
                 {/* Vault Information */}
                 <Card className="bg-card border-border rounded-none">
@@ -1420,7 +1241,7 @@ export default function VaultDetailPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground text-sm">
@@ -1441,16 +1262,7 @@ export default function VaultDetailPage() {
                             {vaultData.minDeposit} SOL
                           </span>
                         </div>
-                        {vaultData.maxDeposit && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground text-sm">
-                              Max Deposit
-                            </span>
-                            <span className="font-medium text-white">
-                              {vaultData.maxDeposit} SOL
-                            </span>
-                          </div>
-                        )}
+                        {/* Max deposit removed - not available in VaultWithMetrics */}
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">

@@ -17,347 +17,21 @@ import {
   ArrowUpIcon,
   StarIcon,
   UserGroupIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useMemo } from "react";
 import { MainNavbar } from "@/components/main-navbar";
 import Particles from "@/components/ui/particles";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { useLeaderboard, LeaderboardEntry, StakerEntry } from "@/hooks/useLeaderboard";
 
-// Dummy leaderboard data for Vault Managers
-interface LeaderboardEntry {
-  rank: number;
-  manager: string;
-  managerFullAddress: string;
-  managerType: "verified" | "ecosystem";
-  totalTVL: number;
-  totalPnL: number;
-  winRate: number;
-  avgAPY: number;
-  vaultCount: number;
-  followers: number;
-  performance: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    quarterly: number;
-  };
-  topVault: {
-    name: string;
-    apy: number;
-  };
-}
+// Interfaces are now imported from useLeaderboard hook
 
-// Dummy data for Vault Stakers
-interface StakerEntry {
-  rank: number;
-  staker: string;
-  stakerFullAddress: string;
-  stakerType: "whale" | "regular" | "new";
-  totalStaked: number;
-  totalRewards: number;
-  stakingPeriod: number; // in days
-  avgAPY: number;
-  vaultCount: number;
-  joinDate: string;
-  performance: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    quarterly: number;
-  };
-  favoriteVault: {
-    name: string;
-    staked: number;
-  };
-}
-
-// Generate Solana wallet addresses with seed for consistency
-const generateSolanaAddress = (seed: number): string => {
-  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let result = "";
-  // Use seed-based generation for consistent results
-  for (let i = 0; i < 44; i++) {
-    const index = (seed + i * 7) % chars.length;
-    result += chars.charAt(index);
-  }
-  return result;
-};
-
-// Truncate wallet address helper
+// Utility functions
 const truncateAddress = (address: string): string => {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
-
-// Generate more dummy data for managers (25 entries for pagination)
-const generateManagerData = (): LeaderboardEntry[] => {
-  const baseData = [
-    {
-      rank: 1,
-      manager: "DegenTrader",
-      managerFullAddress: generateSolanaAddress(1001),
-      managerType: "verified" as const,
-      totalTVL: 45600000,
-      totalPnL: 8900000,
-      winRate: 78.5,
-      avgAPY: 24.8,
-      vaultCount: 3,
-      followers: 1250,
-      performance: {
-        daily: 0.45,
-        weekly: 3.2,
-        monthly: 12.8,
-        quarterly: 24.8,
-      },
-      topVault: {
-        name: "Solana DCA Vault",
-        apy: 15.8,
-      },
-    },
-    {
-      rank: 2,
-      manager: "YieldHunter",
-      managerFullAddress: generateSolanaAddress(1002),
-      managerType: "verified" as const,
-      totalTVL: 38200000,
-      totalPnL: 7100000,
-      winRate: 72.3,
-      avgAPY: 21.5,
-      vaultCount: 2,
-      followers: 980,
-      performance: {
-        daily: 0.38,
-        weekly: 2.9,
-        monthly: 11.2,
-        quarterly: 21.5,
-      },
-      topVault: {
-        name: "Drift Leverage Vault",
-        apy: 22.1,
-      },
-    },
-    {
-      rank: 3,
-      manager: "MemeKing",
-      managerFullAddress: generateSolanaAddress(1003),
-      managerType: "verified" as const,
-      totalTVL: 29800000,
-      totalPnL: 6200000,
-      winRate: 68.9,
-      avgAPY: 28.5,
-      vaultCount: 1,
-      followers: 2100,
-      performance: {
-        daily: 0.89,
-        weekly: 5.67,
-        monthly: 18.23,
-        quarterly: 28.5,
-      },
-      topVault: {
-        name: "BONK DCA Vault",
-        apy: 28.5,
-      },
-    },
-    {
-      rank: 4,
-      manager: "SafeYield",
-      managerFullAddress: generateSolanaAddress(1004),
-      managerType: "verified" as const,
-      totalTVL: 25400000,
-      totalPnL: 2100000,
-      winRate: 85.2,
-      avgAPY: 8.2,
-      vaultCount: 1,
-      followers: 650,
-      performance: {
-        daily: 0.02,
-        weekly: 0.15,
-        monthly: 0.68,
-        quarterly: 8.2,
-      },
-      topVault: {
-        name: "RWA Stable Vault",
-        apy: 8.2,
-      },
-    },
-    {
-      rank: 5,
-      manager: "LPMaster",
-      managerFullAddress: generateSolanaAddress(1005),
-      managerType: "ecosystem" as const,
-      totalTVL: 18700000,
-      totalPnL: 3800000,
-      winRate: 74.1,
-      avgAPY: 19.7,
-      vaultCount: 2,
-      followers: 420,
-      performance: {
-        daily: 0.34,
-        weekly: 2.78,
-        monthly: 9.45,
-        quarterly: 19.7,
-      },
-      topVault: {
-        name: "Jupiter LP Vault",
-        apy: 19.7,
-      },
-    },
-  ];
-
-  // Generate additional entries
-  const additionalEntries: LeaderboardEntry[] = [];
-  const managerNames = [
-    "CryptoWizard",
-    "DeFiGuru",
-    "YieldFarmer",
-    "TokenMaster",
-    "BlockchainPro",
-    "SmartTrader",
-    "AlphaSeeker",
-    "RiskManager",
-    "ProfitHunter",
-    "StrategyKing",
-    "VaultExpert",
-    "TradingBot",
-    "YieldOptimizer",
-    "DeFiNinja",
-    "CryptoSage",
-    "TokenWhale",
-    "StrategyMaster",
-    "YieldGuru",
-    "DeFiLord",
-    "CryptoKnight",
-  ];
-  const vaultNames = [
-    "ETH Yield Vault",
-    "BTC Strategy Vault",
-    "SOL DeFi Vault",
-    "USDC Stable Vault",
-    "Multi-Asset Vault",
-    "Leverage Vault",
-    "Arbitrage Vault",
-    "Staking Vault",
-    "LP Token Vault",
-    "Options Vault",
-  ];
-
-  for (let i = 6; i <= 25; i++) {
-    const seed = i * 123; // Use deterministic seed
-    const randomManager = managerNames[(seed + i) % managerNames.length];
-    const randomVault = vaultNames[(seed + i * 2) % vaultNames.length];
-    const tvl = ((seed * 7) % 15000000) + 5000000;
-    const pnl = ((seed * 3) % 3000000) + 500000;
-    const winRate = ((seed * 5) % 30) + 60;
-    const apy = ((seed * 11) % 20) + 5;
-
-    additionalEntries.push({
-      rank: i,
-      manager: `${randomManager}${i}`,
-      managerFullAddress: generateSolanaAddress(1000 + i),
-      managerType: seed % 10 > 7 ? "ecosystem" : "verified",
-      totalTVL: tvl,
-      totalPnL: pnl,
-      winRate: winRate,
-      avgAPY: apy,
-      vaultCount: ((seed * 13) % 4) + 1,
-      followers: ((seed * 17) % 1000) + 100,
-      performance: {
-        daily: (((seed * 19) % 200) - 100) / 100,
-        weekly: (((seed * 23) % 800) - 200) / 100,
-        monthly: (((seed * 29) % 2000) - 500) / 100,
-        quarterly: apy,
-      },
-      topVault: {
-        name: randomVault,
-        apy: apy + ((seed * 31) % 500) / 100,
-      },
-    });
-  }
-
-  return [...baseData, ...additionalEntries];
-};
-
-// Generate dummy data for stakers (25 entries for pagination)
-const generateStakerData = (): StakerEntry[] => {
-  const stakerNames = [
-    "CryptoWhale",
-    "YieldSeeker",
-    "DeFiStaker",
-    "TokenHolder",
-    "SmartInvestor",
-    "PassiveEarner",
-    "StakingPro",
-    "YieldChaser",
-    "CryptoSaver",
-    "DeFiUser",
-    "TokenStaker",
-    "YieldFan",
-    "CryptoHodler",
-    "StakeKing",
-    "YieldLover",
-    "DeFiFan",
-    "TokenBull",
-    "StakeMaster",
-    "YieldHunter",
-    "CryptoGem",
-  ];
-  const vaultNames = [
-    "ETH Yield Vault",
-    "BTC Strategy Vault",
-    "SOL DeFi Vault",
-    "USDC Stable Vault",
-    "Multi-Asset Vault",
-    "Leverage Vault",
-    "Arbitrage Vault",
-    "Staking Vault",
-    "LP Token Vault",
-    "Options Vault",
-  ];
-
-  const stakerData: StakerEntry[] = [];
-
-  for (let i = 1; i <= 25; i++) {
-    const seed = i * 456; // Use deterministic seed for stakers
-    const randomStaker = stakerNames[(seed + i) % stakerNames.length];
-    const randomVault = vaultNames[(seed + i * 3) % vaultNames.length];
-    const totalStaked = ((seed * 7) % 500000) + 10000;
-    const totalRewards = ((seed * 11) % 50000) + 1000;
-    const stakingPeriod = ((seed * 13) % 300) + 30;
-    const apy = ((seed * 17) % 15) + 5;
-
-    stakerData.push({
-      rank: i,
-      staker: `${randomStaker}${i}`,
-      stakerFullAddress: generateSolanaAddress(2000 + i),
-      stakerType:
-        totalStaked > 100000
-          ? "whale"
-          : totalStaked > 50000
-            ? "regular"
-            : "new",
-      totalStaked: totalStaked,
-      totalRewards: totalRewards,
-      stakingPeriod: stakingPeriod,
-      avgAPY: apy,
-      vaultCount: ((seed * 19) % 3) + 1,
-      joinDate: `2024-${String(((seed * 23) % 12) + 1).padStart(2, "0")}-${String(((seed * 29) % 28) + 1).padStart(2, "0")}`,
-      performance: {
-        daily: (((seed * 31) % 120) - 20) / 100,
-        weekly: (((seed * 37) % 400) - 100) / 100,
-        monthly: (((seed * 41) % 1200) - 300) / 100,
-        quarterly: apy,
-      },
-      favoriteVault: {
-        name: randomVault,
-        staked: Math.floor(totalStaked * 0.6),
-      },
-    });
-  }
-
-  return stakerData;
-};
-
-const managerLeaderboardData = generateManagerData();
-const stakerLeaderboardData = generateStakerData();
 
 export default function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState("quarterly");
@@ -367,9 +41,12 @@ export default function LeaderboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Use leaderboard hook for real data
+  const { managers, stakers, stats, loading, error, refreshLeaderboard } = useLeaderboard();
+
   // Calculate pagination for current tab
   const currentData =
-    activeTab === "managers" ? managerLeaderboardData : stakerLeaderboardData;
+    activeTab === "managers" ? managers : stakers;
   const totalItems = currentData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -451,6 +128,69 @@ export default function LeaderboardPage() {
         return null;
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <MainNavbar />
+        <div className="relative">
+          <div className="absolute inset-0 z-0">
+            <Particles
+              particleColors={["#ffffff", "#ffffff", "#ffffff"]}
+              particleCount={150}
+              particleSpread={8}
+              speed={0.05}
+              particleBaseSize={80}
+              moveParticlesOnHover={true}
+              alphaParticles={true}
+              disableRotation={false}
+              className="h-full w-full"
+            />
+          </div>
+          <div className="relative z-10 flex min-h-screen items-center justify-center">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="text-white/80">Loading leaderboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <MainNavbar />
+        <div className="relative">
+          <div className="absolute inset-0 z-0">
+            <Particles
+              particleColors={["#ffffff", "#ffffff", "#ffffff"]}
+              particleCount={150}
+              particleSpread={8}
+              speed={0.05}
+              particleBaseSize={80}
+              moveParticlesOnHover={true}
+              alphaParticles={true}
+              disableRotation={false}
+              className="h-full w-full"
+            />
+          </div>
+          <div className="relative z-10 flex min-h-screen items-center justify-center">
+            <div className="text-center space-y-4">
+              <ExclamationTriangleIcon className="h-8 w-8 mx-auto text-red-500" />
+              <p className="text-red-500">Error loading leaderboard: {error}</p>
+              <Button onClick={refreshLeaderboard} variant="outline" className="rounded-none">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -562,13 +302,13 @@ export default function LeaderboardPage() {
               <div className="text-primary text-xl font-bold sm:text-2xl">
                 {activeTab === "managers"
                   ? formatCurrency(
-                      managerLeaderboardData.reduce(
+                      managers.reduce(
                         (sum, entry) => sum + entry.totalTVL,
                         0
                       )
                     )
                   : formatCurrency(
-                      stakerLeaderboardData.reduce(
+                      stakers.reduce(
                         (sum, entry) => sum + entry.totalStaked,
                         0
                       )
@@ -588,13 +328,13 @@ export default function LeaderboardPage() {
                 <ArrowUpIcon className="mr-1 h-4 w-4 sm:h-5 sm:w-5" />
                 {activeTab === "managers"
                   ? formatCurrency(
-                      managerLeaderboardData.reduce(
+                      managers.reduce(
                         (sum, entry) => sum + entry.totalPnL,
                         0
                       )
                     )
                   : formatCurrency(
-                      stakerLeaderboardData.reduce(
+                      stakers.reduce(
                         (sum, entry) => sum + entry.totalRewards,
                         0
                       )
@@ -613,16 +353,16 @@ export default function LeaderboardPage() {
               <div className="text-xl font-bold text-white sm:text-2xl">
                 {activeTab === "managers"
                   ? (
-                      managerLeaderboardData.reduce(
+                      managers.reduce(
                         (sum, entry) => sum + entry.winRate,
                         0
-                      ) / managerLeaderboardData.length
+                      ) / managers.length
                     ).toFixed(1) + "%"
                   : (
-                      stakerLeaderboardData.reduce(
+                      stakers.reduce(
                         (sum, entry) => sum + entry.avgAPY,
                         0
-                      ) / stakerLeaderboardData.length
+                      ) / stakers.length
                     ).toFixed(1) + "%"}
               </div>
             </CardContent>

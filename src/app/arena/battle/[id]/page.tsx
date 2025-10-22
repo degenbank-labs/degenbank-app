@@ -16,6 +16,8 @@ import {
   ShieldCheckIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { Loader2 } from "lucide-react";
+import { useBattles } from "@/hooks/useBattles";
 
 // Mock data for demonstration - Updated to match project.md
 const mockVaults = [
@@ -69,10 +71,36 @@ const battlePhases = [
 
 export default function BattleDetailPage() {
   const params = useParams();
-  const battleId = params.id;
-
-  const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
+  const battleId = params.id as string;
   const [selectedVault, setSelectedVault] = useState<number | null>(null);
+  const [stakeAmount, setStakeAmount] = useState("");
+  const [isStaking, setIsStaking] = useState(false);
+
+  // Use battles hook for real data
+  const { getBattleById, loading, error } = useBattles();
+  const [battle, setBattle] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    type: string;
+    status: string;
+    phase: string;
+  } | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
+
+  useEffect(() => {
+    const fetchBattle = async () => {
+      if (battleId) {
+        try {
+          const battleData = await getBattleById(battleId);
+          setBattle(battleData);
+        } catch (err) {
+          console.error('Failed to fetch battle:', err);
+        }
+      }
+    };
+    fetchBattle();
+  }, [battleId, getBattleById]);
 
   // Sort vaults by performance for leaderboard
   const sortedVaults = [...mockVaults].sort(
@@ -115,6 +143,49 @@ export default function BattleDetailPage() {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <MainNavbar />
+        <div className="relative overflow-hidden">
+          <LightRays />
+          <div className="relative z-10 flex items-center justify-center min-h-[80vh]">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-neutral-400">Loading battle details...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <MainNavbar />
+        <div className="relative overflow-hidden">
+          <LightRays />
+          <div className="relative z-10 flex items-center justify-center min-h-[80vh]">
+            <div className="text-center">
+              <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Failed to load battle</h2>
+              <p className="text-neutral-400 mb-4">{error}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       <MainNavbar />
@@ -144,24 +215,28 @@ export default function BattleDetailPage() {
           <div className="container mx-auto px-4 pt-8 pb-6">
             <div className="mb-8 text-center">
               <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
-                <span className="text-white">Battle Arena </span>
+                <span className="text-white">{battle?.name || 'Battle Arena'} </span>
                 <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
                   #{battleId}
                 </span>
               </h1>
 
               <p className="mx-auto mb-6 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
-                <span className="text-primary font-semibold">
-                  Vault managers compete with strategy.
-                </span>
-                <br />
-                <span className="text-white/80">
-                  Users stake with conviction.
-                </span>
-                <br />
-                <span className="text-primary font-semibold">
-                  The best vault wins it all.
-                </span>
+                {battle?.description || (
+                  <>
+                    <span className="text-primary font-semibold">
+                      Vault managers compete with strategy.
+                    </span>
+                    <br />
+                    <span className="text-white/80">
+                      Users stake with conviction.
+                    </span>
+                    <br />
+                    <span className="text-primary font-semibold">
+                      The best vault wins it all.
+                    </span>
+                  </>
+                )}
               </p>
 
               {/* Battle Status */}
@@ -170,7 +245,7 @@ export default function BattleDetailPage() {
                   variant="outline"
                   className="border-primary text-primary rounded-none px-4 py-2"
                 >
-                  DCA Arena - Phase #1
+                  {battle?.type || 'DCA Arena'} - {battle?.phase || 'Phase #1'}
                 </Badge>
                 <Badge
                   variant="outline"
