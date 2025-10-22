@@ -19,7 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 
-interface ArenaData {
+// Import BattleWithMetrics type
+type BattleWithMetrics = {
   id: string;
   name: string;
   type: string;
@@ -33,73 +34,9 @@ interface ArenaData {
   description: string;
   color: string;
   cubePosition: { row: number; col: number };
-}
+};
 
-// Arena data based on project.md
-const arenas: ArenaData[] = [
-  {
-    id: "dca-arena-1",
-    name: "DCA Arena #1",
-    type: "DCA Strategy",
-    status: "Ongoing Battle",
-    phase: "Battle Phase",
-    timeRemaining: "12d 14h 32m",
-    totalTVL: 281000,
-    activeVaults: 3,
-    participants: 105,
-    prizePool: 21200,
-    description:
-      "Dollar Cost Averaging strategies compete for the highest yield",
-    color: "#6fb7a5",
-    cubePosition: { row: 0, col: 0 },
-  },
-  {
-    id: "lending-arena-1",
-    name: "Lending Arena #1",
-    type: "Lending Strategy",
-    status: "Open Deposit",
-    phase: "Stake Phase",
-    timeRemaining: "2d 8h 15m",
-    totalTVL: 450000,
-    activeVaults: 5,
-    participants: 78,
-    prizePool: 35000,
-    description: "Lending protocols battle for the best risk-adjusted returns",
-    color: "#FB605C",
-    cubePosition: { row: 0, col: 1 },
-  },
-  {
-    id: "rwa-vs-degen-1",
-    name: "RWA vs Degen #1",
-    type: "Mixed Strategy",
-    status: "Starting Soon",
-    phase: "Registration",
-    timeRemaining: "5d 12h 45m",
-    totalTVL: 0,
-    activeVaults: 0,
-    participants: 23,
-    prizePool: 50000,
-    description:
-      "Real World Assets vs Degen strategies in the ultimate showdown",
-    color: "#FFB800",
-    cubePosition: { row: 1, col: 0 },
-  },
-  {
-    id: "yield-farming-1",
-    name: "Yield Farming Arena #1",
-    type: "Yield Farming",
-    status: "Coming Soon",
-    phase: "Preparation",
-    timeRemaining: "14d 6h 30m",
-    totalTVL: 0,
-    activeVaults: 0,
-    participants: 0,
-    prizePool: 75000,
-    description: "Advanced yield farming strategies compete for maximum APY",
-    color: "#9333EA",
-    cubePosition: { row: 1, col: 1 },
-  },
-];
+// Using BattleWithMetrics interface from useBattles hook
 
 export default function BattleArenaPage() {
   const router = useRouter();
@@ -112,6 +49,17 @@ export default function BattleArenaPage() {
   
   // Use battles hook for real data
   const { battles: arenas, stats, loading, error, refreshBattles } = useBattles();
+
+  // Calculate dynamic grid size based on number of battles
+  const calculateGridSize = (battleCount: number): number => {
+    if (battleCount <= 1) return 1;
+    if (battleCount <= 4) return 2;
+    if (battleCount <= 9) return 3;
+    if (battleCount <= 16) return 4;
+    return Math.ceil(Math.sqrt(battleCount));
+  };
+
+  const gridSize = calculateGridSize(arenas.length);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -128,7 +76,7 @@ export default function BattleArenaPage() {
     }
   };
 
-  const handleCubeClick = (arena: ArenaData, row: number, col: number) => {
+  const handleCubeClick = (arena: BattleWithMetrics, row: number, col: number) => {
     setIsLoading(true);
 
     // Simulate loading time before navigation
@@ -138,7 +86,7 @@ export default function BattleArenaPage() {
   };
 
   const handleCubeHover = (
-    arena: ArenaData | null,
+    arena: BattleWithMetrics | null,
     row: number,
     col: number
   ) => {
@@ -300,7 +248,7 @@ export default function BattleArenaPage() {
             {/* Centered Arena Cubes */}
             <div className="w-fit">
               <Cubes
-                gridSize={2}
+                gridSize={gridSize}
                 cubeSize={150}
                 maxAngle={60}
                 radius={12}

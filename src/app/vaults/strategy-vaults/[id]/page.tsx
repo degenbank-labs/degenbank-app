@@ -8,12 +8,16 @@ import {
   ShieldCheckIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
+  TrophyIcon,
+  FireIcon,
 } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
+import { useVaultPerformance, PerformanceDataPoint } from "@/hooks/useVaultPerformance";
+import { useLeaderboard } from "@/hooks/useLeaderboard";
 import {
   ComposedChart,
   Area,
@@ -25,316 +29,7 @@ import {
 } from "recharts";
 import { SolanaIconSvg } from "@/components/svg";
 
-// Performance chart data for 14D period
-const performanceData14D = [
-  { date: "02 Nov", value: 0, roi: 0, sharePrice: 1.0, vaultBalance: 5500000 },
-  {
-    date: "03 Nov",
-    value: 1.8,
-    roi: 1.8,
-    sharePrice: 1.018,
-    vaultBalance: 5650000,
-  },
-  {
-    date: "04 Nov",
-    value: -0.5,
-    roi: -0.5,
-    sharePrice: 0.995,
-    vaultBalance: 5480000,
-  },
-  {
-    date: "05 Nov",
-    value: 3.2,
-    roi: 3.2,
-    sharePrice: 1.032,
-    vaultBalance: 5720000,
-  },
-  {
-    date: "06 Nov",
-    value: 2.1,
-    roi: 2.1,
-    sharePrice: 1.021,
-    vaultBalance: 5680000,
-  },
-  {
-    date: "07 Nov",
-    value: 5.4,
-    roi: 5.4,
-    sharePrice: 1.054,
-    vaultBalance: 6100000,
-  },
-  {
-    date: "08 Nov",
-    value: 4.3,
-    roi: 4.3,
-    sharePrice: 1.043,
-    vaultBalance: 6050000,
-  },
-  {
-    date: "09 Nov",
-    value: 1.2,
-    roi: 1.2,
-    sharePrice: 1.012,
-    vaultBalance: 5850000,
-  },
-  {
-    date: "10 Nov",
-    value: 6.8,
-    roi: 6.8,
-    sharePrice: 1.068,
-    vaultBalance: 6200000,
-  },
-  {
-    date: "11 Nov",
-    value: 8.5,
-    roi: 8.5,
-    sharePrice: 1.085,
-    vaultBalance: 6450000,
-  },
-  {
-    date: "12 Nov",
-    value: 7.1,
-    roi: 7.1,
-    sharePrice: 1.071,
-    vaultBalance: 6380000,
-  },
-  {
-    date: "13 Nov",
-    value: 10.2,
-    roi: 10.2,
-    sharePrice: 1.102,
-    vaultBalance: 6750000,
-  },
-  {
-    date: "14 Nov",
-    value: 9.4,
-    roi: 9.4,
-    sharePrice: 1.094,
-    vaultBalance: 6680000,
-  },
-  {
-    date: "15 Nov",
-    value: 12.6,
-    roi: 12.6,
-    sharePrice: 1.126,
-    vaultBalance: 7200000,
-  },
-];
 
-// Performance chart data for 30D period
-const performanceData30D = [
-  { date: "17 Oct", value: 0, roi: 0, sharePrice: 1.0, vaultBalance: 5500000 },
-  {
-    date: "18 Oct",
-    value: 1.2,
-    roi: 1.2,
-    sharePrice: 1.012,
-    vaultBalance: 5650000,
-  },
-  {
-    date: "19 Oct",
-    value: -0.8,
-    roi: -0.8,
-    sharePrice: 0.992,
-    vaultBalance: 5480000,
-  },
-  {
-    date: "20 Oct",
-    value: 2.5,
-    roi: 2.5,
-    sharePrice: 1.025,
-    vaultBalance: 5720000,
-  },
-  {
-    date: "21 Oct",
-    value: 1.8,
-    roi: 1.8,
-    sharePrice: 1.018,
-    vaultBalance: 5680000,
-  },
-  {
-    date: "22 Oct",
-    value: 4.2,
-    roi: 4.2,
-    sharePrice: 1.042,
-    vaultBalance: 6100000,
-  },
-  {
-    date: "23 Oct",
-    value: 3.1,
-    roi: 3.1,
-    sharePrice: 1.031,
-    vaultBalance: 6050000,
-  },
-  {
-    date: "24 Oct",
-    value: -1.5,
-    roi: -1.5,
-    sharePrice: 0.985,
-    vaultBalance: 5850000,
-  },
-  {
-    date: "25 Oct",
-    value: 2.8,
-    roi: 2.8,
-    sharePrice: 1.028,
-    vaultBalance: 6200000,
-  },
-  {
-    date: "26 Oct",
-    value: 6.3,
-    roi: 6.3,
-    sharePrice: 1.063,
-    vaultBalance: 6450000,
-  },
-  {
-    date: "27 Oct",
-    value: 5.1,
-    roi: 5.1,
-    sharePrice: 1.051,
-    vaultBalance: 6380000,
-  },
-  {
-    date: "28 Oct",
-    value: 8.7,
-    roi: 8.7,
-    sharePrice: 1.087,
-    vaultBalance: 6750000,
-  },
-  {
-    date: "29 Oct",
-    value: 7.2,
-    roi: 7.2,
-    sharePrice: 1.072,
-    vaultBalance: 6680000,
-  },
-  {
-    date: "30 Oct",
-    value: 11.4,
-    roi: 11.4,
-    sharePrice: 1.114,
-    vaultBalance: 7200000,
-  },
-  {
-    date: "31 Oct",
-    value: 9.8,
-    roi: 9.8,
-    sharePrice: 1.098,
-    vaultBalance: 7050000,
-  },
-  {
-    date: "01 Nov",
-    value: 13.6,
-    roi: 13.6,
-    sharePrice: 1.136,
-    vaultBalance: 7580000,
-  },
-  {
-    date: "02 Nov",
-    value: 12.1,
-    roi: 12.1,
-    sharePrice: 1.121,
-    vaultBalance: 7420000,
-  },
-  {
-    date: "03 Nov",
-    value: 15.9,
-    roi: 15.9,
-    sharePrice: 1.159,
-    vaultBalance: 8100000,
-  },
-  {
-    date: "04 Nov",
-    value: 14.2,
-    roi: 14.2,
-    sharePrice: 1.142,
-    vaultBalance: 7950000,
-  },
-  {
-    date: "05 Nov",
-    value: 18.5,
-    roi: 18.5,
-    sharePrice: 1.185,
-    vaultBalance: 8650000,
-  },
-  {
-    date: "06 Nov",
-    value: 16.8,
-    roi: 16.8,
-    sharePrice: 1.168,
-    vaultBalance: 8480000,
-  },
-  {
-    date: "07 Nov",
-    value: 21.3,
-    roi: 21.3,
-    sharePrice: 1.213,
-    vaultBalance: 9200000,
-  },
-  {
-    date: "08 Nov",
-    value: 19.7,
-    roi: 19.7,
-    sharePrice: 1.197,
-    vaultBalance: 9050000,
-  },
-  {
-    date: "09 Nov",
-    value: 24.8,
-    roi: 24.8,
-    sharePrice: 1.248,
-    vaultBalance: 9850000,
-  },
-  {
-    date: "10 Nov",
-    value: 22.4,
-    roi: 22.4,
-    sharePrice: 1.224,
-    vaultBalance: 9650000,
-  },
-  {
-    date: "11 Nov",
-    value: 27.6,
-    roi: 27.6,
-    sharePrice: 1.276,
-    vaultBalance: 10500000,
-  },
-  {
-    date: "12 Nov",
-    value: 25.9,
-    roi: 25.9,
-    sharePrice: 1.259,
-    vaultBalance: 10300000,
-  },
-  {
-    date: "13 Nov",
-    value: 31.2,
-    roi: 31.2,
-    sharePrice: 1.312,
-    vaultBalance: 11200000,
-  },
-  {
-    date: "14 Nov",
-    value: 28.8,
-    roi: 28.8,
-    sharePrice: 1.288,
-    vaultBalance: 10950000,
-  },
-  {
-    date: "15 Nov",
-    value: 34.5,
-    roi: 34.5,
-    sharePrice: 1.345,
-    vaultBalance: 12100000,
-  },
-];
-
-// Function to get performance data based on selected period
-const getPerformanceData = (period: "14D" | "30D") => {
-  return period === "14D" ? performanceData14D : performanceData30D;
-};
-
-// Dummy data for vault details
 // Using VaultWithMetrics interface from useVaults hook instead of local VaultData interface
 
 export default function VaultDetailPage() {
@@ -352,6 +47,17 @@ export default function VaultDetailPage() {
   // Use real API data
   const { getVaultById, loading, error } = useVaults();
   const [vaultData, setVaultData] = useState<VaultWithMetrics | null>(null);
+  
+  // Use real performance data
+  const { 
+    performanceData, 
+    loading: performanceLoading, 
+    error: performanceError,
+    refetch: refetchPerformance 
+  } = useVaultPerformance(vaultId);
+
+  // Use real leaderboard data
+  const { managers: leaderboardData } = useLeaderboard();
 
   useEffect(() => {
     const fetchVault = async () => {
@@ -365,7 +71,14 @@ export default function VaultDetailPage() {
       }
     };
     fetchVault();
-  }, [vaultId, getVaultById]);
+  }, [vaultId]); // Removed getVaultById from dependencies to prevent unnecessary re-renders
+
+  // Refetch performance data when period changes
+  useEffect(() => {
+    if (vaultId) {
+      refetchPerformance(selectedPeriod);
+    }
+  }, [selectedPeriod, vaultId]);
 
   // Loading state
   if (loading) {
@@ -420,7 +133,12 @@ export default function VaultDetailPage() {
 
   // Get chart data based on selected chart type and period
   const getChartData = () => {
-    const currentData = getPerformanceData(selectedPeriod);
+    // Use real performance data only
+    const currentData = performanceData;
+
+    if (!currentData || currentData.length === 0) {
+      return [];
+    }
 
     switch (selectedChart) {
       case "roi":
@@ -436,23 +154,35 @@ export default function VaultDetailPage() {
       case "vaultBalance":
         return currentData.map((item) => ({
           ...item,
-          value: item.vaultBalance / 1000000, // Convert to millions for better display
+          value: item.vaultBalance,
         }));
       default:
-        return currentData;
+        return currentData.map((item) => ({
+          ...item,
+          value: item.roi,
+        }));
     }
   };
 
   // Get chart label and format based on selected chart type
   const getChartConfig = () => {
-    const currentData = getPerformanceData(selectedPeriod);
+    const currentData = performanceData;
+
+    if (!currentData || currentData.length === 0) {
+      return {
+        label: "ROI (%)",
+        format: (value: number) => `${value.toFixed(2)}%`,
+        color: "#34CB88",
+        domain: [0, 100],
+      };
+    }
 
     switch (selectedChart) {
       case "roi":
         // Determine if we have negative values in ROI data
-        const hasNegativeROI = currentData.some((item) => item.roi < 0);
-        const maxROI = Math.max(...currentData.map((item) => item.roi));
-        const minROI = Math.min(...currentData.map((item) => item.roi));
+        const hasNegativeROI = currentData.some((item: PerformanceDataPoint) => item.roi < 0);
+        const maxROI = Math.max(...currentData.map((item: PerformanceDataPoint) => item.roi));
+        const minROI = Math.min(...currentData.map((item: PerformanceDataPoint) => item.roi));
 
         return {
           label: "ROI (%)",
@@ -493,12 +223,23 @@ export default function VaultDetailPage() {
   const chartData = getChartData();
   const chartConfig = getChartConfig();
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(2)}%`;
+  const formatPercentage = (percentage: number | null | undefined) => {
+    // Convert to number and handle null/undefined/invalid values
+    const numericPercentage = Number(percentage) || 0;
+    return `${numericPercentage >= 0 ? "+" : ""}${numericPercentage.toFixed(2)}%`;
   };
 
-  const getManagerBadge = (managerType: string) => {
-    switch (managerType) {
+  const formatAPY = (apy: number | null | undefined) => {
+    // Convert to number and handle null/undefined/invalid values
+    const numericAPY = Number(apy) || 0;
+    return `${numericAPY.toFixed(1)}%`;
+  };
+
+  const getManagerBadge = (managerType?: string) => {
+    // Ensure managerType has a fallback value
+    const safeManagerType = managerType || "verified";
+    
+    switch (safeManagerType) {
       case "verified":
         return (
           <div className="flex items-center space-x-1">
@@ -510,6 +251,46 @@ export default function VaultDetailPage() {
           <div className="flex items-center space-x-1">
             <UserGroupIcon className="h-4 w-4 text-purple-400/60" />
           </div>
+        );
+      default:
+        return (
+          <div className="flex items-center space-x-1">
+            <ShieldCheckIcon className="text-primary h-4 w-4" />
+          </div>
+        );
+    }
+  };
+
+  const getBattleStatusBadge = (battleStatus?: string, isDisqualified?: boolean) => {
+    if (isDisqualified) {
+      return (
+        <Badge variant="destructive" className="flex items-center space-x-1">
+          <ExclamationTriangleIcon className="h-3 w-3" />
+          <span>Disqualified</span>
+        </Badge>
+      );
+    }
+
+    switch (battleStatus) {
+      case "active":
+        return (
+          <Badge variant="default" className="bg-green-600 flex items-center space-x-1">
+            <FireIcon className="h-3 w-3" />
+            <span>In Battle</span>
+          </Badge>
+        );
+      case "winner":
+        return (
+          <Badge variant="default" className="bg-yellow-600 flex items-center space-x-1">
+            <TrophyIcon className="h-3 w-3" />
+            <span>Winner</span>
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge variant="secondary" className="flex items-center space-x-1">
+            <span>Battle Ended</span>
+          </Badge>
         );
       default:
         return null;
@@ -541,15 +322,18 @@ export default function VaultDetailPage() {
 
             {/* Vault Info */}
             <div className="w-full sm:w-auto">
-              <h1 className="mb-1 text-xl font-bold text-white sm:text-2xl">
-                {vaultData.name || "Vault Name"}
-              </h1>
+              <div className="flex items-center space-x-3 mb-1">
+                <h1 className="text-xl font-bold text-white sm:text-2xl">
+                  {vaultData?.name || "Vault Name"}
+                </h1>
+                {getBattleStatusBadge(vaultData?.status, vaultData?.is_disqualified)}
+              </div>
               <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
                 <div className="flex items-center space-x-1">
                   <span className="text-muted-foreground">Manager:</span>
-                  {getManagerBadge(vaultData.managerType || "verified")}
+                  {getManagerBadge(vaultData?.managerType)}
                   <span className="font-medium text-white">
-                    {vaultData.manager?.manager_name || "Unknown Manager"}
+                    {vaultData?.manager?.manager_name || "Unknown Manager"}
                   </span>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -591,6 +375,21 @@ export default function VaultDetailPage() {
           >
             Your Performance
           </Button>
+          {/* Show Arena Battle tab only if vault is in battle */}
+          {(vaultData?.status === "active" || vaultData?.status === "winner") && (
+            <Button
+              variant={activeTab === "arena-battle" ? "default" : "outline"}
+              onClick={() => setActiveTab("arena-battle")}
+              className={`hover:bg-primary w-full cursor-pointer rounded-none border-gray-400 bg-transparent hover:text-black sm:w-auto ${
+                activeTab === "arena-battle"
+                  ? "bg-primary text-black"
+                  : "text-white"
+              }`}
+            >
+              <FireIcon className="h-4 w-4 mr-1" />
+              Arena Battle
+            </Button>
+          )}
           <Button
             variant={activeTab === "overview" ? "default" : "outline"}
             onClick={() => setActiveTab("overview")}
@@ -610,7 +409,7 @@ export default function VaultDetailPage() {
                 APY (90 days)
               </div>
               <div className="text-primary mt-1 text-base font-bold sm:text-lg">
-                {vaultData.apy || "0.00%"}
+                {formatAPY(vaultData?.apy)}
               </div>
             </div>
             <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">
@@ -618,7 +417,7 @@ export default function VaultDetailPage() {
                 Strategy
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData.strategy || "N/A"}
+                {vaultData?.strategy || "N/A"}
               </div>
             </div>
             <div className="border-border border-r px-4 py-4 sm:px-8">
@@ -626,7 +425,7 @@ export default function VaultDetailPage() {
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                $ {vaultData.tvl ? (vaultData.tvl / 1000).toFixed(1) : "0.0"}K
+                $ {vaultData?.tvl && typeof vaultData.tvl === 'number' ? (vaultData.tvl / 1000).toFixed(1) : "0.0"}K
               </div>
             </div>
             <div className="px-4 py-4 sm:px-8">
@@ -634,7 +433,7 @@ export default function VaultDetailPage() {
                 Risk Level
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData.risk || "N/A"}
+                {vaultData?.risk || "Low"}
               </div>
             </div>
           </div>
@@ -1377,6 +1176,171 @@ export default function VaultDetailPage() {
                 </Card>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Arena Battle Tab */}
+        {activeTab === "arena" && (
+          <div className="space-y-6">
+            {/* Battle Status Header */}
+            <Card className="bg-card border-border rounded-none">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FireIcon className="h-6 w-6 text-orange-500" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        Arena Battle Status
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Compete with other vaults for the highest returns
+                      </p>
+                    </div>
+                  </div>
+                  {getBattleStatusBadge(vaultData?.status, vaultData?.is_disqualified)}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Battle Information */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Battle Details */}
+              <Card className="bg-card border-border rounded-none">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-white">
+                    Battle Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-sm">
+                      Battle ID
+                    </span>
+                    <span className="font-medium text-white">
+                      {vaultData?.battle_id || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-sm">
+                      Current ROI
+                    </span>
+                    <span className={`font-medium ${
+                      (vaultData?.current_roi || 0) >= 0 ? "text-profit" : "text-loss"
+                    }`}>
+                      {vaultData?.current_roi ? `${Number(vaultData.current_roi).toFixed(2)}%` : "0.00%"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-sm">
+                      Daily Performance
+                    </span>
+                    <span className={`font-medium ${
+                      (vaultData?.daily_performance || 0) >= 0 ? "text-profit" : "text-loss"
+                    }`}>
+                      {vaultData?.daily_performance ? `${Number(vaultData.daily_performance).toFixed(2)}%` : "0.00%"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-sm">
+                      Weekly Performance
+                    </span>
+                    <span className={`font-medium ${
+                      (vaultData?.weekly_performance || 0) >= 0 ? "text-profit" : "text-loss"
+                    }`}>
+                      {vaultData?.weekly_performance ? `${Number(vaultData.weekly_performance).toFixed(2)}%` : "0.00%"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground text-sm">
+                      Monthly Performance
+                    </span>
+                    <span className={`font-medium ${
+                      (vaultData?.monthly_performance || 0) >= 0 ? "text-profit" : "text-loss"
+                    }`}>
+                      {vaultData?.monthly_performance ? `${Number(vaultData.monthly_performance).toFixed(2)}%` : "0.00%"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Battle Leaderboard Preview */}
+              <Card className="bg-card border-border rounded-none">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-white">
+                    Battle Leaderboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Real leaderboard data from API */}
+                    {leaderboardData.slice(0, 3).map((manager, index) => {
+                      const rankColors = ['bg-yellow-500', 'bg-gray-400', 'bg-orange-600'];
+                      const textColors = ['text-black', 'text-black', 'text-white'];
+                      
+                      return (
+                        <div key={manager.rank} className="flex items-center justify-between p-3 bg-background/50 rounded">
+                          <div className="flex items-center space-x-3">
+                            <div className={`flex h-6 w-6 items-center justify-center rounded-full ${rankColors[index]} text-xs font-bold ${textColors[index]}`}>
+                              {manager.rank}
+                            </div>
+                            <span className="text-sm font-medium text-white">
+                              {manager.manager}
+                            </span>
+                          </div>
+                          <span className={`text-sm font-medium ${
+                            manager.performance.monthly >= 0 ? "text-profit" : "text-loss"
+                          }`}>
+                            {manager.performance.monthly >= 0 ? '+' : ''}{manager.performance.monthly.toFixed(2)}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/arena">
+                      <Button variant="outline" className="w-full text-white border-border hover:bg-background/50">
+                        View Full Leaderboard
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Battle Rules */}
+            <Card className="bg-card border-border rounded-none">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-white">
+                  Battle Rules & Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-white">
+                      How It Works
+                    </h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li>• Vaults compete based on ROI performance</li>
+                      <li>• Rankings updated in real-time</li>
+                      <li>• Winners receive special recognition</li>
+                      <li>• Disqualified vaults cannot win</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-white">
+                      Battle Duration
+                    </h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li>• Battles run for fixed periods</li>
+                      <li>• Performance tracked continuously</li>
+                      <li>• Final rankings determined at battle end</li>
+                      <li>• New battles start regularly</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

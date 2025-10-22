@@ -571,7 +571,7 @@ export default function PositionsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div className="text-primary font-medium">
+                      <div className="text-green-400 font-medium">
                         {position.apy}
                       </div>
                     </td>

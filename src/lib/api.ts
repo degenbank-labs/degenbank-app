@@ -58,6 +58,21 @@ export interface Vault {
   battle_id: number | null;
   created_at: string;
   is_available: boolean;
+  // New arena/battle fields
+  current_roi?: number;
+  daily_performance?: number;
+  weekly_performance?: number;
+  monthly_performance?: number;
+  total_value_locked?: number;
+  share_price?: number;
+  participants_count?: number;
+  battle_status?: string;
+  is_disqualified?: boolean;
+  last_performance_update?: string;
+  risk_level?: 'Low' | 'Medium' | 'High';
+  apy?: number;
+  deposit_asset?: string;
+  min_deposit?: number;
   manager?: Manager;
   battle?: Battle;
 }
@@ -65,6 +80,35 @@ export interface Vault {
 export interface GetVaultsResponse {
   results: Vault[];
   total: number;
+}
+
+export interface VaultPerformanceData {
+  date: string;
+  value: number;
+  roi: number;
+  sharePrice: number;
+  vaultBalance: number;
+}
+
+export interface VaultPerformanceResponse {
+  period: string;
+  data: VaultPerformanceData[];
+  summary: {
+    totalReturn: number;
+    volatility: number;
+    sharpeRatio: number;
+    maxDrawdown: number;
+  };
+}
+
+export interface VaultPerformanceUpdate {
+  current_roi?: number;
+  daily_performance?: number;
+  weekly_performance?: number;
+  monthly_performance?: number;
+  total_value_locked?: number;
+  share_price?: number;
+  participants_count?: number;
 }
 
 // Battle interfaces
@@ -232,6 +276,31 @@ class ApiService {
 
   async getAllVaults(skip: number = 0, limit: number = 10): Promise<GetVaultsResponse> {
     const response = await this.request<GetVaultsResponse>(`/vault?skip=${skip}&limit=${limit}`);
+    return response.data;
+  }
+
+  async getVaultsByBattleId(battleId: number): Promise<Vault[]> {
+    const response = await this.request<Vault[]>(`/vault/battle/${battleId}`);
+    return response.data;
+  }
+
+  async getVaultPerformance(vaultId: string, period: string = '14D'): Promise<VaultPerformanceResponse> {
+    const response = await this.request<VaultPerformanceResponse>(`/vault/${vaultId}/performance?period=${period}`);
+    return response.data;
+  }
+
+  async updateVaultPerformance(vaultId: string, performanceData: VaultPerformanceUpdate): Promise<Vault> {
+    const response = await this.request<Vault>(`/vault/${vaultId}/performance`, {
+      method: 'PUT',
+      body: JSON.stringify(performanceData),
+    });
+    return response.data;
+  }
+
+  async disqualifyVault(vaultId: string): Promise<Vault> {
+    const response = await this.request<Vault>(`/vault/${vaultId}/disqualify`, {
+      method: 'POST',
+    });
     return response.data;
   }
 

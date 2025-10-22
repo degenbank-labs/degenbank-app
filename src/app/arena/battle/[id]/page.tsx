@@ -18,49 +18,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
+import { useBattleVaults } from "@/hooks/useBattleVaults";
 
-// Mock data for demonstration - Updated to match project.md
-const mockVaults = [
-  {
-    id: 1,
-    name: "Solana DCA",
-    manager: "0x1234...5678",
-    strategy: "DCA Strategy",
-    tvl: 125000,
-    apy: 12.5,
-    performance: 15.2,
-    risk: "Medium",
-    status: "active",
-    participants: 45,
-    color: "#6fb7a5",
-  },
-  {
-    id: 2,
-    name: "BONK DCA",
-    manager: "0x9876...5432",
-    strategy: "DCA Strategy",
-    tvl: 89000,
-    apy: 24.8,
-    performance: 12.8,
-    risk: "High",
-    status: "active",
-    participants: 32,
-    color: "#FB605C",
-  },
-  {
-    id: 3,
-    name: "Raydium DCA",
-    manager: "0xabcd...efgh",
-    strategy: "DCA Strategy",
-    tvl: 67000,
-    apy: 18.2,
-    performance: 9.5,
-    risk: "Medium",
-    status: "active",
-    participants: 28,
-    color: "#FFB800",
-  },
-];
+// Battle phases data - this could also be made dynamic in the future
 
 const battlePhases = [
   { name: "Stake Phase", status: "completed", duration: "3 days" },
@@ -88,6 +48,9 @@ export default function BattleDetailPage() {
   } | null>(null);
   const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
 
+  // Use battle vaults hook for real vault data
+  const { vaults: battleVaults, loading: vaultsLoading, error: vaultsError } = useBattleVaults(battleId);
+
   useEffect(() => {
     const fetchBattle = async () => {
       if (battleId) {
@@ -102,10 +65,8 @@ export default function BattleDetailPage() {
     fetchBattle();
   }, [battleId, getBattleById]);
 
-  // Sort vaults by performance for leaderboard
-  const sortedVaults = [...mockVaults].sort(
-    (a, b) => b.performance - a.performance
-  );
+  // Sort vaults by performance for leaderboard (already sorted in hook)
+  const sortedVaults = battleVaults;
 
   useEffect(() => {
     // Simulate countdown timer

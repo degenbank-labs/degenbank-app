@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  ChartBarIcon,
   UserGroupIcon,
   ShieldCheckIcon,
   TrophyIcon,
@@ -13,137 +12,39 @@ import {
   ArrowDownIcon,
   EyeIcon,
   ExclamationTriangleIcon,
+  FireIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import Particles from "@/components/ui/particles";
 import { ChartArea, VaultIcon, Loader2 } from "lucide-react";
 import { useVaults } from "@/hooks/useVaults";
 
-// Dummy data based on project.md
-const vaultsData = {
-  totalTVL: 45678900,
-  totalPnL: 2345678,
-  verifiedManagers: 12,
-  ecosystemManagers: 8,
-  vaults: [
-    {
-      id: "solana-dca",
-      name: "Solana DCA Vault",
-      manager: "DegenTrader",
-      managerType: "verified",
-      tvl: 12450000,
-      apy: "15.8%",
-      age: "45 days",
-      strategy: "DCA into SOL with automated rebalancing",
-      risk: "Medium",
-      depositAsset: "USDC",
-      minDeposit: 100,
-      status: "Active",
-      symbolImage: "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.12,
-        weekly: 2.34,
-        monthly: 8.67,
-      },
-    },
-    {
-      id: "bonk-dca",
-      name: "BONK DCA Vault",
-      manager: "MemeKing",
-      managerType: "verified",
-      tvl: 8900000,
-      apy: "28.5%",
-      age: "32 days",
-      strategy: "Aggressive DCA into BONK with momentum trading",
-      risk: "High",
-      depositAsset: "USDC",
-      minDeposit: 50,
-      status: "Active",
-      symbolImage: "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.89,
-        weekly: 5.67,
-        monthly: 18.23,
-      },
-    },
-    {
-      id: "rwa-stable",
-      name: "RWA Stable Vault",
-      manager: "SafeYield",
-      managerType: "verified",
-      tvl: 15600000,
-      apy: "8.2%",
-      age: "78 days",
-      strategy: "70% T-bills, 30% DeFi money markets",
-      risk: "Low",
-      depositAsset: "USDC",
-      minDeposit: 1000,
-      status: "Active",
-      symbolImage: "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.02,
-        weekly: 0.15,
-        monthly: 0.68,
-      },
-    },
-    {
-      id: "drift-leverage",
-      name: "Drift Leverage Vault",
-      manager: "YieldHunter",
-      managerType: "ecosystem",
-      tvl: 6780000,
-      apy: "22.1%",
-      age: "23 days",
-      strategy: "Leveraged yield farming on Drift Protocol",
-      risk: "High",
-      depositAsset: "SOL",
-      minDeposit: 1,
-      status: "Active",
-      symbolImage: "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.45,
-        weekly: 3.21,
-        monthly: 12.89,
-      },
-    },
-    {
-      id: "jup-lp",
-      name: "Jupiter LP Vault",
-      manager: "LPMaster",
-      managerType: "ecosystem",
-      tvl: 4320000,
-      apy: "19.7%",
-      age: "67 days",
-      strategy: "Optimized LP positions on Jupiter Exchange",
-      risk: "Medium",
-      depositAsset: "USDC",
-      minDeposit: 250,
-      status: "Active",
-      symbolImage: "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-      performance: {
-        daily: 0.34,
-        weekly: 2.78,
-        monthly: 9.45,
-      },
-    },
-  ],
-};
-
 export default function StrategyVaultsPage() {
   const { vaults, stats, loading, error, refreshVaults } = useVaults();
 
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) {
-      return `$${(amount / 1000000).toFixed(1)}M`;
+  const formatCurrency = (amount: number | null | undefined) => {
+    // Convert to number and handle null/undefined/invalid values
+    const numericAmount = Number(amount) || 0;
+
+    if (numericAmount >= 1000000) {
+      return `$${(numericAmount / 1000000).toFixed(1)}M`;
     }
-    if (amount >= 1000) {
-      return `$${(amount / 1000).toFixed(1)}K`;
+    if (numericAmount >= 1000) {
+      return `$${(numericAmount / 1000).toFixed(1)}K`;
     }
-    return `$${amount.toFixed(0)}`;
+    return `$${numericAmount.toFixed(0)}`;
   };
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(2)}%`;
+  const formatPercentage = (percentage: number | null | undefined) => {
+    // Convert to number and handle null/undefined/invalid values
+    const numericPercentage = Number(percentage) || 0;
+    return `${numericPercentage >= 0 ? "+" : ""}${numericPercentage.toFixed(2)}%`;
+  };
+
+  const formatAPY = (apy: number | null | undefined) => {
+    // Convert to number and handle null/undefined/invalid values
+    const numericAPY = Number(apy) || 0;
+    return `${numericAPY.toFixed(1)}%`;
   };
 
   const getRiskBadge = (risk: string) => {
@@ -211,6 +112,48 @@ export default function StrategyVaultsPage() {
     }
   };
 
+  const getBattleStatusBadge = (
+    battleStatus?: string,
+    isDisqualified?: boolean
+  ) => {
+    if (isDisqualified) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-loss/10 text-loss hover:bg-loss/20 rounded-none border-none"
+        >
+          <ExclamationTriangleIcon className="mr-1 h-3 w-3" />
+          Disqualified
+        </Badge>
+      );
+    }
+
+    switch (battleStatus) {
+      case "active":
+        return (
+          <Badge
+            variant="secondary"
+            className="rounded-none border-none bg-orange-500/10 text-orange-500 hover:bg-orange-500/20"
+          >
+            <FireIcon className="mr-1 h-3 w-3" />
+            In Battle
+          </Badge>
+        );
+      case "winner":
+        return (
+          <Badge
+            variant="secondary"
+            className="rounded-none border-none bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
+          >
+            <TrophyIcon className="mr-1 h-3 w-3" />
+            Winner
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   const [selectedFilter, setSelectedFilter] = useState("all");
 
   const filteredVaults = vaults.filter((vault) => {
@@ -242,8 +185,8 @@ export default function StrategyVaultsPage() {
           />
         </div>
         <div className="relative z-10 flex min-h-screen items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <div className="space-y-4 text-center">
+            <Loader2 className="text-primary mx-auto h-8 w-8 animate-spin" />
             <p className="text-muted-foreground">Loading vaults...</p>
           </div>
         </div>
@@ -269,10 +212,14 @@ export default function StrategyVaultsPage() {
           />
         </div>
         <div className="relative z-10 flex min-h-screen items-center justify-center">
-          <div className="text-center space-y-4">
-            <ExclamationTriangleIcon className="h-8 w-8 mx-auto text-red-500" />
+          <div className="space-y-4 text-center">
+            <ExclamationTriangleIcon className="mx-auto h-8 w-8 text-red-500" />
             <p className="text-red-500">Error loading vaults: {error}</p>
-            <Button onClick={refreshVaults} variant="outline" className="rounded-none">
+            <Button
+              onClick={refreshVaults}
+              variant="outline"
+              className="rounded-none"
+            >
               Try Again
             </Button>
           </div>
@@ -399,11 +346,7 @@ export default function StrategyVaultsPage() {
           >
             <ShieldCheckIcon className="mr-2 h-4 w-4" />
             Verified Managers (
-            {
-              vaults.filter((v) => v.managerType === "verified")
-                .length
-            }
-            )
+            {vaults.filter((v) => v.managerType === "verified").length})
           </Button>
           <Button
             variant={selectedFilter === "ecosystem" ? "default" : "outline"}
@@ -412,11 +355,7 @@ export default function StrategyVaultsPage() {
           >
             <UserGroupIcon className="mr-2 h-4 w-4" />
             Ecosystem Partners (
-            {
-              vaults.filter((v) => v.managerType === "ecosystem")
-                .length
-            }
-            )
+            {vaults.filter((v) => v.managerType === "ecosystem").length})
           </Button>
         </div>
 
@@ -466,16 +405,20 @@ export default function StrategyVaultsPage() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <img 
-                      src={vault.symbolImage} 
+                    <img
+                      src={vault.symbolImage}
                       alt={`${vault.name} symbol`}
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                      className="h-10 w-10 flex-shrink-0 rounded-lg object-cover"
                     />
                     <div className="space-y-2">
                       <CardTitle className="text-lg">{vault.name}</CardTitle>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {getManagerTypeBadge(vault.managerType)}
                         {getRiskBadge(vault.risk)}
+                        {getBattleStatusBadge(
+                          vault.battle_status,
+                          vault.is_disqualified
+                        )}
                       </div>
                     </div>
                   </div>
@@ -492,7 +435,7 @@ export default function StrategyVaultsPage() {
                   <div>
                     <div className="text-muted-foreground text-sm">90D APY</div>
                     <div className="text-primary text-lg font-bold">
-                      {vault.apy}
+                      {formatAPY(vault.apy)}
                     </div>
                   </div>
                   <div>
@@ -546,6 +489,29 @@ export default function StrategyVaultsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Battle Performance Indicator */}
+                  {(vault.battle_status === "active" ||
+                    vault.battle_status === "winner") && (
+                    <div className="mt-3 rounded border border-orange-500/20 bg-orange-500/10 p-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center text-orange-500">
+                          <FireIcon className="mr-1 h-3 w-3" />
+                          Battle ROI
+                        </div>
+                        <div className="font-bold text-orange-500">
+                          {vault.battle_status === "winner"
+                            ? "+24.5%"
+                            : "+12.3%"}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground mt-1 text-xs">
+                        {vault.battle_status === "winner"
+                          ? "🏆 Battle Winner"
+                          : "⚔️ Currently in battle"}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">

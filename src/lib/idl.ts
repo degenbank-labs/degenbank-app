@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/degen_bank.json`.
  */
 export type DegenBank = {
-	address: '9DqSUZYEkt5toDghkTveyYTBQ1VBAYQyfRvSQJtCvh5d'
+	address: 'GoXfRMXGPgf91TSUViswPtnfEbTj4c9D6uqJe3VcPx6q'
 	metadata: {
 		name: 'degenBank'
 		version: '0.1.0'
@@ -202,7 +202,7 @@ export type DegenBank = {
 							},
 							{
 								kind: 'account'
-								path: 'authority'
+								path: 'referee'
 							}
 						]
 					}
@@ -460,77 +460,77 @@ export type DegenBank = {
 	errors: [
 		{
 			code: 6000
-			name: 'insufficientFunds'
+			name: 'InsufficientFunds'
 			msg: 'Insufficient funds in vault'
 		},
 		{
 			code: 6001
-			name: 'fullRegistered'
+			name: 'FullRegistered'
 			msg: 'Registration is full'
 		},
 		{
 			code: 6002
-			name: 'alreadyRegistered'
+			name: 'AlreadyRegistered'
 			msg: 'Vault Already Registered'
 		},
 		{
 			code: 6003
-			name: 'winnerDecided'
+			name: 'WinnerDecided'
 			msg: 'Winner decided'
 		},
 		{
 			code: 6004
-			name: 'onLockPeriod'
+			name: 'OnLockPeriod'
 			msg: 'On lock period'
 		},
 		{
 			code: 6005
-			name: 'outsideLockPeriod'
+			name: 'OutsideLockPeriod'
 			msg: 'Outside lock period'
 		},
 		{
 			code: 6006
-			name: 'invalidLockPeriod'
+			name: 'InvalidLockPeriod'
 			msg: 'Invalid lock period: end must be greater than start'
 		},
 		{
 			code: 6007
-			name: 'vaultAndSignerMismatch'
+			name: 'VaultAndSignerMismatch'
 			msg: 'Vault and vault_as_signer must be the same address'
 		},
 		{
 			code: 6008
-			name: 'vaultFull'
+			name: 'VaultFull'
 			msg: 'Vault already full'
 		},
 		{
 			code: 6009
-			name: 'tooManyAmount'
+			name: 'TooManyAmount'
 			msg: 'Amount is too large try more small amount'
 		},
 		{
 			code: 6010
-			name: 'unAuthorized'
-			msg: 'unAuthorized'
+			name: 'UnAuthorized'
+			msg: 'UnAuthorized'
 		},
 		{
 			code: 6011
-			name: 'alreadyDisqualified'
+			name: 'AlreadyDisqualified'
 			msg: 'Already Disqulified'
 		},
 		{
 			code: 6012
-			name: 'fullDisqualified'
-			msg: 'fullDisqualified'
+			name: 'FullDisqualified'
+			msg: 'FullDisqualified'
 		},
 		{
 			code: 6013
-			name: 'battleOnGoing'
+			name: 'BattleOnGoing'
 			msg: 'Battle is On Going'
 		},
 		{
 			code: 6014
-			name: 'battleNotEnded'
+			name: 'BattleNotEnded'
 			msg: 'Battle Not ENd'
 		}
 	]

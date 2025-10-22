@@ -1402,7 +1402,7 @@ export default function OverviewPage() {
                       </td>
                       <td className="px-1 py-2 text-right">
                         <div className="text-primary text-xs">
-                          {position.apy}
+                          {parseFloat(position.apy).toFixed(1)}%
                         </div>
                       </td>
                     </tr>
