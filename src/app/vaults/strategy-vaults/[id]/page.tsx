@@ -8,16 +8,20 @@ import {
   ShieldCheckIcon,
   UserGroupIcon,
   ExclamationTriangleIcon,
-  TrophyIcon,
-  FireIcon,
 } from "@heroicons/react/24/outline";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
-import { useVaultPerformance, PerformanceDataPoint } from "@/hooks/useVaultPerformance";
+import {
+  useVaultPerformance,
+  PerformanceDataPoint,
+} from "@/hooks/useVaultPerformance";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { useVaultOperations } from "@/hooks/useVaultOperations";
+import { useAuth } from "@/hooks/useAuth";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
 import {
   ComposedChart,
   Area,
@@ -28,7 +32,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { SolanaIconSvg } from "@/components/svg";
-
 
 // Using VaultWithMetrics interface from useVaults hook instead of local VaultData interface
 
@@ -43,17 +46,26 @@ export default function VaultDetailPage() {
   const [depositWithdrawTab, setDepositWithdrawTab] = useState<
     "deposit" | "withdraw"
   >("deposit");
+  const [amount, setAmount] = useState<string>("");
 
   // Use real API data
   const { getVaultById, loading, error } = useVaults();
   const [vaultData, setVaultData] = useState<VaultWithMetrics | null>(null);
-  
+
+  // Auth and vault operations
+  const { authenticated, walletAddress, login } = useAuth();
+  const { deposit, withdraw, depositState, withdrawState, isConnected } =
+    useVaultOperations();
+
+  // User balance
+  const { balance, isLoading: balanceLoading, tokenSymbol } = useTokenBalance();
+
   // Use real performance data
-  const { 
-    performanceData, 
-    loading: performanceLoading, 
+  const {
+    performanceData,
+    loading: performanceLoading,
     error: performanceError,
-    refetch: refetchPerformance 
+    refetch: refetchPerformance,
   } = useVaultPerformance(vaultId);
 
   // Use real leaderboard data
@@ -79,6 +91,62 @@ export default function VaultDetailPage() {
       refetchPerformance(selectedPeriod);
     }
   }, [selectedPeriod, vaultId]);
+
+  // Handle deposit
+  const handleDeposit = async () => {
+    if (!authenticated) {
+      login();
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      return;
+    }
+
+    try {
+      const result = await deposit(vaultId, parseFloat(amount));
+      if (result.success) {
+        setAmount("");
+        // Optionally refetch vault data to update balances
+      }
+    } catch (error) {
+      console.error("Deposit failed:", error);
+    }
+  };
+
+  // Handle withdraw
+  const handleWithdraw = async () => {
+    if (!authenticated) {
+      login();
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      return;
+    }
+
+    try {
+      const result = await withdraw(vaultId, parseFloat(amount));
+      if (result.success) {
+        setAmount("");
+        // Optionally refetch vault data to update balances
+      }
+    } catch (error) {
+      console.error("Withdraw failed:", error);
+    }
+  };
+
+  // Handle max button click
+  const handleMaxClick = () => {
+    if (depositWithdrawTab === "deposit") {
+      // Use user's actual balance for deposit
+      setAmount(balance.toString());
+    } else {
+      // For withdraw, we would need user's vault position
+      // For now, use 0 as placeholder until we implement vault position tracking
+      setAmount("0");
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -180,9 +248,15 @@ export default function VaultDetailPage() {
     switch (selectedChart) {
       case "roi":
         // Determine if we have negative values in ROI data
-        const hasNegativeROI = currentData.some((item: PerformanceDataPoint) => item.roi < 0);
-        const maxROI = Math.max(...currentData.map((item: PerformanceDataPoint) => item.roi));
-        const minROI = Math.min(...currentData.map((item: PerformanceDataPoint) => item.roi));
+        const hasNegativeROI = currentData.some(
+          (item: PerformanceDataPoint) => item.roi < 0
+        );
+        const maxROI = Math.max(
+          ...currentData.map((item: PerformanceDataPoint) => item.roi)
+        );
+        const minROI = Math.min(
+          ...currentData.map((item: PerformanceDataPoint) => item.roi)
+        );
 
         return {
           label: "ROI (%)",
@@ -238,7 +312,7 @@ export default function VaultDetailPage() {
   const getManagerBadge = (managerType?: string) => {
     // Ensure managerType has a fallback value
     const safeManagerType = managerType || "verified";
-    
+
     switch (safeManagerType) {
       case "verified":
         return (
@@ -258,42 +332,6 @@ export default function VaultDetailPage() {
             <ShieldCheckIcon className="text-primary h-4 w-4" />
           </div>
         );
-    }
-  };
-
-  const getBattleStatusBadge = (battleStatus?: string, isDisqualified?: boolean) => {
-    if (isDisqualified) {
-      return (
-        <Badge variant="destructive" className="flex items-center space-x-1">
-          <ExclamationTriangleIcon className="h-3 w-3" />
-          <span>Disqualified</span>
-        </Badge>
-      );
-    }
-
-    switch (battleStatus) {
-      case "active":
-        return (
-          <Badge variant="default" className="bg-green-600 flex items-center space-x-1">
-            <FireIcon className="h-3 w-3" />
-            <span>In Battle</span>
-          </Badge>
-        );
-      case "winner":
-        return (
-          <Badge variant="default" className="bg-yellow-600 flex items-center space-x-1">
-            <TrophyIcon className="h-3 w-3" />
-            <span>Winner</span>
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge variant="secondary" className="flex items-center space-x-1">
-            <span>Battle Ended</span>
-          </Badge>
-        );
-      default:
-        return null;
     }
   };
 
@@ -322,11 +360,10 @@ export default function VaultDetailPage() {
 
             {/* Vault Info */}
             <div className="w-full sm:w-auto">
-              <div className="flex items-center space-x-3 mb-1">
+              <div className="mb-1 flex items-center space-x-3">
                 <h1 className="text-xl font-bold text-white sm:text-2xl">
                   {vaultData?.name || "Vault Name"}
                 </h1>
-                {getBattleStatusBadge(vaultData?.status, vaultData?.is_disqualified)}
               </div>
               <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
                 <div className="flex items-center space-x-1">
@@ -375,21 +412,7 @@ export default function VaultDetailPage() {
           >
             Your Performance
           </Button>
-          {/* Show Arena Battle tab only if vault is in battle */}
-          {(vaultData?.status === "active" || vaultData?.status === "winner") && (
-            <Button
-              variant={activeTab === "arena-battle" ? "default" : "outline"}
-              onClick={() => setActiveTab("arena-battle")}
-              className={`hover:bg-primary w-full cursor-pointer rounded-none border-gray-400 bg-transparent hover:text-black sm:w-auto ${
-                activeTab === "arena-battle"
-                  ? "bg-primary text-black"
-                  : "text-white"
-              }`}
-            >
-              <FireIcon className="h-4 w-4 mr-1" />
-              Arena Battle
-            </Button>
-          )}
+
           <Button
             variant={activeTab === "overview" ? "default" : "outline"}
             onClick={() => setActiveTab("overview")}
@@ -417,7 +440,7 @@ export default function VaultDetailPage() {
                 Strategy
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.strategy || "N/A"}
+                {vaultData?.vault_strategy || vaultData?.strategy || "N/A"}
               </div>
             </div>
             <div className="border-border border-r px-4 py-4 sm:px-8">
@@ -425,7 +448,14 @@ export default function VaultDetailPage() {
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                $ {vaultData?.tvl && typeof vaultData.tvl === 'number' ? (vaultData.tvl / 1000).toFixed(1) : "0.0"}K
+                ${" "}
+                {vaultData?.total_value_locked
+                  ? (Number(vaultData.total_value_locked) / 1000000).toFixed(
+                      1
+                    ) + "M"
+                  : vaultData?.tvl && typeof vaultData.tvl === "number"
+                    ? (vaultData.tvl / 1000000).toFixed(1) + "M"
+                    : "0.0M"}
               </div>
             </div>
             <div className="px-4 py-4 sm:px-8">
@@ -433,7 +463,7 @@ export default function VaultDetailPage() {
                 Risk Level
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.risk || "Low"}
+                {vaultData?.risk_level || vaultData?.risk || "Medium"}
               </div>
             </div>
           </div>
@@ -766,22 +796,26 @@ export default function VaultDetailPage() {
                         <label className="text-muted-foreground text-sm">
                           Amount
                         </label>
-                        <span className="text-muted-foreground text-sm">
-                          Max: 0.00
-                        </span>
+                        <button
+                          onClick={handleMaxClick}
+                          className="text-muted-foreground cursor-pointer text-sm hover:text-white"
+                        >
+                          Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                        </button>
                       </div>
                       <div className="bg-background border-border relative border">
                         <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
                           <SolanaIconSvg width={20} height={20} />
                           <span className="text-sm font-medium text-white">
-                            SOL
+                            {tokenSymbol}
                           </span>
                         </div>
                         <input
                           type="number"
-                          placeholder=""
+                          placeholder="0"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
                           className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          defaultValue="0"
                         />
                       </div>
                     </div>
@@ -790,23 +824,115 @@ export default function VaultDetailPage() {
                     <div className="mb-6 flex justify-between text-sm">
                       <span className="text-muted-foreground">Balance</span>
                       <div className="flex items-center space-x-2">
-                        <span className="text-white">0.00</span>
+                        <span className="text-white">
+                          {balanceLoading
+                            ? "Loading..."
+                            : `${balance.toFixed(4)} ${tokenSymbol}`}
+                        </span>
                         <SolanaIconSvg width={16} height={16} />
                       </div>
                     </div>
 
                     {/* Action Button */}
-                    <Button
-                      className={`w-full cursor-pointer py-3 text-sm font-medium ${
-                        depositWithdrawTab === "deposit"
-                          ? "bg-profit hover:bg-profit/90 text-black"
-                          : "bg-loss hover:bg-loss/90 text-white"
-                      }`}
-                    >
-                      {depositWithdrawTab === "deposit"
-                        ? "Confirm Deposit"
-                        : "Request Withdrawal"}
-                    </Button>
+                    {!isConnected ? (
+                      <Button
+                        onClick={login}
+                        className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        Login to{" "}
+                        {depositWithdrawTab === "deposit"
+                          ? "Deposit"
+                          : "Withdraw"}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={
+                          depositWithdrawTab === "deposit"
+                            ? handleDeposit
+                            : handleWithdraw
+                        }
+                        disabled={
+                          depositWithdrawTab === "deposit"
+                            ? depositState.isLoading
+                            : withdrawState.isLoading
+                        }
+                        className={`w-full cursor-pointer py-3 text-sm font-medium ${
+                          depositWithdrawTab === "deposit"
+                            ? "bg-profit hover:bg-profit/90 text-black"
+                            : "bg-loss hover:bg-loss/90 text-white"
+                        }`}
+                      >
+                        {depositWithdrawTab === "deposit"
+                          ? depositState.isLoading
+                            ? "Processing..."
+                            : "Confirm Deposit"
+                          : withdrawState.isLoading
+                            ? "Processing..."
+                            : "Request Withdrawal"}
+                      </Button>
+                    )}
+
+                    {/* Error Messages */}
+                    {depositState.error && depositWithdrawTab === "deposit" && (
+                      <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                        {depositState.error}
+                      </div>
+                    )}
+                    {withdrawState.error &&
+                      depositWithdrawTab === "withdraw" && (
+                        <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                          {withdrawState.error}
+                        </div>
+                      )}
+
+                    {/* Success Messages */}
+                    {depositState.txSignature &&
+                      !depositState.error &&
+                      depositWithdrawTab === "deposit" && (
+                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                          Deposit successful! Transaction:{" "}
+                          {depositState.txSignature}
+                        </div>
+                      )}
+                    {withdrawState.txSignature &&
+                      !withdrawState.error &&
+                      depositWithdrawTab === "withdraw" && (
+                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                          Withdrawal request successful! Transaction:{" "}
+                          {withdrawState.txSignature}
+                        </div>
+                      )}
+
+                    {/* Error Messages */}
+                    {depositState.error && depositWithdrawTab === "deposit" && (
+                      <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                        {depositState.error}
+                      </div>
+                    )}
+                    {withdrawState.error &&
+                      depositWithdrawTab === "withdraw" && (
+                        <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                          {withdrawState.error}
+                        </div>
+                      )}
+
+                    {/* Success Messages */}
+                    {depositState.txSignature &&
+                      !depositState.error &&
+                      depositWithdrawTab === "deposit" && (
+                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                          Deposit successful! Transaction:{" "}
+                          {depositState.txSignature}
+                        </div>
+                      )}
+                    {withdrawState.txSignature &&
+                      !withdrawState.error &&
+                      depositWithdrawTab === "withdraw" && (
+                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                          Withdrawal request successful! Transaction:{" "}
+                          {withdrawState.txSignature}
+                        </div>
+                      )}
                   </CardContent>
                 </Card>
               </div>
@@ -833,11 +959,13 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <SolanaIconSvg width={16} height={16} />
+                      {/* TODO: Integrate with user cumulative deposits API */}
                       <span className="font-medium text-white">0</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
+                    {/* TODO: Integrate with user performance percentage API */}
                     <span className="text-sm text-[#6B7280]">0%</span>
                   </div>
 
@@ -847,6 +975,8 @@ export default function VaultDetailPage() {
                         Vault Shares
                       </span>
                     </Tooltip>
+                    {/* TODO: Integrate with user vault shares API */}
+                    <span className="font-medium text-white">0</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -855,6 +985,7 @@ export default function VaultDetailPage() {
                         Max Daily Drawdown
                       </span>
                     </Tooltip>
+                    {/* TODO: Integrate with user max daily drawdown API */}
                     <span className="font-medium text-white">0.00%</span>
                   </div>
                 </div>
@@ -869,6 +1000,7 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <SolanaIconSvg width={16} height={16} />
+                      {/* TODO: Integrate with user fees paid API */}
                       <span className="font-medium text-white">0</span>
                     </div>
                   </div>
@@ -881,6 +1013,7 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <SolanaIconSvg width={16} height={16} />
+                      {/* TODO: Integrate with user high-water mark API */}
                       <span className="font-medium text-white">0</span>
                     </div>
                   </div>
@@ -930,22 +1063,26 @@ export default function VaultDetailPage() {
                       <label className="text-muted-foreground text-sm">
                         Amount
                       </label>
-                      <span className="text-muted-foreground text-sm">
-                        Max: 0.00
-                      </span>
+                      <button
+                        onClick={handleMaxClick}
+                        className="text-muted-foreground cursor-pointer text-sm hover:text-white"
+                      >
+                        Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                      </button>
                     </div>
                     <div className="bg-background border-border relative border">
                       <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
                         <SolanaIconSvg width={20} height={20} />
                         <span className="text-sm font-medium text-white">
-                          SOL
+                          {tokenSymbol}
                         </span>
                       </div>
                       <input
                         type="number"
-                        placeholder=""
+                        placeholder="0"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
                         className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        defaultValue="0"
                       />
                     </div>
                   </div>
@@ -954,23 +1091,83 @@ export default function VaultDetailPage() {
                   <div className="mb-6 flex justify-between text-sm">
                     <span className="text-muted-foreground">Balance</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-white">0.00</span>
+                      <span className="text-white">
+                        {balanceLoading
+                          ? "Loading..."
+                          : `${balance.toFixed(4)} ${tokenSymbol}`}
+                      </span>
                       <SolanaIconSvg width={16} height={16} />
                     </div>
                   </div>
 
                   {/* Action Button */}
-                  <Button
-                    className={`w-full cursor-pointer py-3 text-sm font-medium ${
-                      depositWithdrawTab === "deposit"
-                        ? "bg-profit hover:bg-profit/90 text-black"
-                        : "bg-loss hover:bg-loss/90 text-white"
-                    }`}
-                  >
-                    {depositWithdrawTab === "deposit"
-                      ? "Confirm Deposit"
-                      : "Request Withdrawal"}
-                  </Button>
+                  {!isConnected ? (
+                    <Button
+                      onClick={login}
+                      className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                      Login to{" "}
+                      {depositWithdrawTab === "deposit"
+                        ? "Deposit"
+                        : "Withdraw"}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={
+                        depositWithdrawTab === "deposit"
+                          ? handleDeposit
+                          : handleWithdraw
+                      }
+                      disabled={
+                        depositWithdrawTab === "deposit"
+                          ? depositState.isLoading
+                          : withdrawState.isLoading
+                      }
+                      className={`w-full cursor-pointer py-3 text-sm font-medium ${
+                        depositWithdrawTab === "deposit"
+                          ? "bg-profit hover:bg-profit/90 text-black"
+                          : "bg-loss hover:bg-loss/90 text-white"
+                      }`}
+                    >
+                      {depositWithdrawTab === "deposit"
+                        ? depositState.isLoading
+                          ? "Processing..."
+                          : "Confirm Deposit"
+                        : withdrawState.isLoading
+                          ? "Processing..."
+                          : "Request Withdrawal"}
+                    </Button>
+                  )}
+
+                  {/* Error Messages */}
+                  {depositState.error && depositWithdrawTab === "deposit" && (
+                    <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                      {depositState.error}
+                    </div>
+                  )}
+                  {withdrawState.error && depositWithdrawTab === "withdraw" && (
+                    <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                      {withdrawState.error}
+                    </div>
+                  )}
+
+                  {/* Success Messages */}
+                  {depositState.txSignature &&
+                    !depositState.error &&
+                    depositWithdrawTab === "deposit" && (
+                      <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                        Deposit successful! Transaction:{" "}
+                        {depositState.txSignature}
+                      </div>
+                    )}
+                  {withdrawState.txSignature &&
+                    !withdrawState.error &&
+                    depositWithdrawTab === "withdraw" && (
+                      <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
+                        Withdrawal request successful! Transaction:{" "}
+                        {withdrawState.txSignature}
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             </div>
@@ -1027,6 +1224,55 @@ export default function VaultDetailPage() {
                     </div>
 
                     {/* Strategy details section removed - not available in API */}
+                  </CardContent>
+                </Card>
+
+                {/* Vault Address Card */}
+                <Card className="bg-card border-border rounded-none">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-lg text-white">
+                      Vault Address
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-muted-foreground mb-1 block text-sm">
+                          Contract Address
+                        </span>
+                        <span className="font-mono text-sm break-all text-white">
+                          {vaultData?.vault_address || "N/A"}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border hover:bg-background/50 ml-4 flex items-center space-x-2 text-white"
+                        onClick={() => {
+                          if (vaultData?.vault_address) {
+                            window.open(
+                              `https://solscan.io/account/${vaultData.vault_address}`,
+                              "_blank"
+                            );
+                          }
+                        }}
+                      >
+                        <span>View on Explorer</span>
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1131,22 +1377,26 @@ export default function VaultDetailPage() {
                         <label className="text-muted-foreground text-sm">
                           Amount
                         </label>
-                        <span className="text-muted-foreground text-sm">
-                          Max: 0.00
-                        </span>
+                        <button
+                          onClick={handleMaxClick}
+                          className="text-muted-foreground cursor-pointer text-sm hover:text-white"
+                        >
+                          Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                        </button>
                       </div>
                       <div className="bg-background border-border relative border">
                         <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
                           <SolanaIconSvg width={20} height={20} />
                           <span className="text-sm font-medium text-white">
-                            SOL
+                            {tokenSymbol}
                           </span>
                         </div>
                         <input
                           type="number"
-                          placeholder=""
+                          placeholder="0"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
                           className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          defaultValue="0"
                         />
                       </div>
                     </div>
@@ -1155,192 +1405,57 @@ export default function VaultDetailPage() {
                     <div className="mb-6 flex justify-between text-sm">
                       <span className="text-muted-foreground">Balance</span>
                       <div className="flex items-center space-x-2">
-                        <span className="text-white">0.00</span>
+                        <span className="text-white">
+                          {balanceLoading
+                            ? "Loading..."
+                            : `${balance.toFixed(4)} ${tokenSymbol}`}
+                        </span>
                         <SolanaIconSvg width={16} height={16} />
                       </div>
                     </div>
 
                     {/* Action Button */}
-                    <Button
-                      className={`w-full cursor-pointer py-3 text-sm font-medium ${
-                        depositWithdrawTab === "deposit"
-                          ? "bg-profit hover:bg-profit/90 text-black"
-                          : "bg-loss hover:bg-loss/90 text-white"
-                      }`}
-                    >
-                      {depositWithdrawTab === "deposit"
-                        ? "Confirm Deposit"
-                        : "Request Withdrawal"}
-                    </Button>
+                    {!isConnected ? (
+                      <Button
+                        onClick={login}
+                        className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        Login to{" "}
+                        {depositWithdrawTab === "deposit"
+                          ? "Deposit"
+                          : "Withdraw"}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={
+                          depositWithdrawTab === "deposit"
+                            ? handleDeposit
+                            : handleWithdraw
+                        }
+                        disabled={
+                          depositWithdrawTab === "deposit"
+                            ? depositState.isLoading
+                            : withdrawState.isLoading
+                        }
+                        className={`w-full cursor-pointer py-3 text-sm font-medium ${
+                          depositWithdrawTab === "deposit"
+                            ? "bg-profit hover:bg-profit/90 text-black"
+                            : "bg-loss hover:bg-loss/90 text-white"
+                        }`}
+                      >
+                        {depositWithdrawTab === "deposit"
+                          ? depositState.isLoading
+                            ? "Processing..."
+                            : "Confirm Deposit"
+                          : withdrawState.isLoading
+                            ? "Processing..."
+                            : "Request Withdrawal"}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Arena Battle Tab */}
-        {activeTab === "arena" && (
-          <div className="space-y-6">
-            {/* Battle Status Header */}
-            <Card className="bg-card border-border rounded-none">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <FireIcon className="h-6 w-6 text-orange-500" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">
-                        Arena Battle Status
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        Compete with other vaults for the highest returns
-                      </p>
-                    </div>
-                  </div>
-                  {getBattleStatusBadge(vaultData?.status, vaultData?.is_disqualified)}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Battle Information */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Battle Details */}
-              <Card className="bg-card border-border rounded-none">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg text-white">
-                    Battle Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">
-                      Battle ID
-                    </span>
-                    <span className="font-medium text-white">
-                      {vaultData?.battle_id || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">
-                      Current ROI
-                    </span>
-                    <span className={`font-medium ${
-                      (vaultData?.current_roi || 0) >= 0 ? "text-profit" : "text-loss"
-                    }`}>
-                      {vaultData?.current_roi ? `${Number(vaultData.current_roi).toFixed(2)}%` : "0.00%"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">
-                      Daily Performance
-                    </span>
-                    <span className={`font-medium ${
-                      (vaultData?.daily_performance || 0) >= 0 ? "text-profit" : "text-loss"
-                    }`}>
-                      {vaultData?.daily_performance ? `${Number(vaultData.daily_performance).toFixed(2)}%` : "0.00%"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">
-                      Weekly Performance
-                    </span>
-                    <span className={`font-medium ${
-                      (vaultData?.weekly_performance || 0) >= 0 ? "text-profit" : "text-loss"
-                    }`}>
-                      {vaultData?.weekly_performance ? `${Number(vaultData.weekly_performance).toFixed(2)}%` : "0.00%"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground text-sm">
-                      Monthly Performance
-                    </span>
-                    <span className={`font-medium ${
-                      (vaultData?.monthly_performance || 0) >= 0 ? "text-profit" : "text-loss"
-                    }`}>
-                      {vaultData?.monthly_performance ? `${Number(vaultData.monthly_performance).toFixed(2)}%` : "0.00%"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Battle Leaderboard Preview */}
-              <Card className="bg-card border-border rounded-none">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg text-white">
-                    Battle Leaderboard
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* Real leaderboard data from API */}
-                    {leaderboardData.slice(0, 3).map((manager, index) => {
-                      const rankColors = ['bg-yellow-500', 'bg-gray-400', 'bg-orange-600'];
-                      const textColors = ['text-black', 'text-black', 'text-white'];
-                      
-                      return (
-                        <div key={manager.rank} className="flex items-center justify-between p-3 bg-background/50 rounded">
-                          <div className="flex items-center space-x-3">
-                            <div className={`flex h-6 w-6 items-center justify-center rounded-full ${rankColors[index]} text-xs font-bold ${textColors[index]}`}>
-                              {manager.rank}
-                            </div>
-                            <span className="text-sm font-medium text-white">
-                              {manager.manager}
-                            </span>
-                          </div>
-                          <span className={`text-sm font-medium ${
-                            manager.performance.monthly >= 0 ? "text-profit" : "text-loss"
-                          }`}>
-                            {manager.performance.monthly >= 0 ? '+' : ''}{manager.performance.monthly.toFixed(2)}%
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4">
-                    <Link href="/arena">
-                      <Button variant="outline" className="w-full text-white border-border hover:bg-background/50">
-                        View Full Leaderboard
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Battle Rules */}
-            <Card className="bg-card border-border rounded-none">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-white">
-                  Battle Rules & Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-white">
-                      How It Works
-                    </h4>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li>• Vaults compete based on ROI performance</li>
-                      <li>• Rankings updated in real-time</li>
-                      <li>• Winners receive special recognition</li>
-                      <li>• Disqualified vaults cannot win</li>
-                    </ul>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-medium text-white">
-                      Battle Duration
-                    </h4>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li>• Battles run for fixed periods</li>
-                      <li>• Performance tracked continuously</li>
-                      <li>• Final rankings determined at battle end</li>
-                      <li>• New battles start regularly</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

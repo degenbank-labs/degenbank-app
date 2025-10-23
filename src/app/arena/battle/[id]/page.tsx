@@ -49,7 +49,11 @@ export default function BattleDetailPage() {
   const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
 
   // Use battle vaults hook for real vault data
-  const { vaults: battleVaults, loading: vaultsLoading, error: vaultsError } = useBattleVaults(battleId);
+  const {
+    vaults: battleVaults,
+    loading: vaultsLoading,
+    error: vaultsError,
+  } = useBattleVaults(battleId);
 
   useEffect(() => {
     const fetchBattle = async () => {
@@ -58,7 +62,7 @@ export default function BattleDetailPage() {
           const battleData = await getBattleById(battleId);
           setBattle(battleData);
         } catch (err) {
-          console.error('Failed to fetch battle:', err);
+          console.error("Failed to fetch battle:", err);
         }
       }
     };
@@ -111,9 +115,9 @@ export default function BattleDetailPage() {
         <MainNavbar />
         <div className="relative overflow-hidden">
           <LightRays />
-          <div className="relative z-10 flex items-center justify-center min-h-[80vh]">
+          <div className="relative z-10 flex min-h-[80vh] items-center justify-center">
             <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <Loader2 className="text-primary mx-auto mb-4 h-8 w-8 animate-spin" />
               <p className="text-neutral-400">Loading battle details...</p>
             </div>
           </div>
@@ -129,13 +133,15 @@ export default function BattleDetailPage() {
         <MainNavbar />
         <div className="relative overflow-hidden">
           <LightRays />
-          <div className="relative z-10 flex items-center justify-center min-h-[80vh]">
+          <div className="relative z-10 flex min-h-[80vh] items-center justify-center">
             <div className="text-center">
-              <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Failed to load battle</h2>
-              <p className="text-neutral-400 mb-4">{error}</p>
-              <Button 
-                onClick={() => window.location.reload()} 
+              <ExclamationTriangleIcon className="mx-auto mb-4 h-12 w-12 text-red-500" />
+              <h2 className="mb-2 text-xl font-semibold">
+                Failed to load battle
+              </h2>
+              <p className="mb-4 text-neutral-400">{error}</p>
+              <Button
+                onClick={() => window.location.reload()}
                 variant="outline"
               >
                 Try Again
@@ -176,7 +182,9 @@ export default function BattleDetailPage() {
           <div className="container mx-auto px-4 pt-8 pb-6">
             <div className="mb-8 text-center">
               <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
-                <span className="text-white">{battle?.name || 'Battle Arena'} </span>
+                <span className="text-white">
+                  {battle?.name || "Battle Arena"}{" "}
+                </span>
                 <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
                   #{battleId}
                 </span>
@@ -206,7 +214,7 @@ export default function BattleDetailPage() {
                   variant="outline"
                   className="border-primary text-primary rounded-none px-4 py-2"
                 >
-                  {battle?.type || 'DCA Arena'} - {battle?.phase || 'Phase #1'}
+                  {battle?.type || "DCA Arena"} - {battle?.phase || "Phase #1"}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -414,55 +422,6 @@ export default function BattleDetailPage() {
                       <span className="text-white/60">Battle Duration</span>
                       <span className="font-bold text-white">14 days</span>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Leading Vault Info */}
-                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-white">
-                      <TrophyIcon className="text-primary mr-2 h-5 w-5" />
-                      <span className="font-bold text-white">
-                        Leading Vault
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <div className="mb-6">
-                      <h3 className="font-cirka mb-2 text-2xl font-bold text-white">
-                        {sortedVaults[0]?.name}
-                      </h3>
-                      <p className="text-primary text-lg font-semibold">
-                        Currently Leading
-                      </p>
-                      <div className="bg-primary/10 border-primary/20 mt-4 border p-4">
-                        <div className="mb-1 text-3xl font-bold text-green-400">
-                          +{sortedVaults[0]?.performance}%
-                        </div>
-                        <div className="text-sm text-white/60">
-                          Performance Lead
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mb-6 space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Current Lead</span>
-                        <span className="font-bold text-green-400">
-                          +{sortedVaults[0]?.performance}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Strategy</span>
-                        <span className="text-white">
-                          {sortedVaults[0]?.strategy}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button className="bg-primary hover:bg-primary/80 hover:shadow-primary/30 w-full font-bold text-black transition-all duration-300 hover:shadow-lg">
-                      Stake with Leader
-                    </Button>
                   </CardContent>
                 </Card>
 

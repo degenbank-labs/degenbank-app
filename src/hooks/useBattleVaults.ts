@@ -41,17 +41,17 @@ export const useBattleVaults = (battleId: string) => {
       const vaultsData = await apiService.getVaultsByBattleId(Number(battleId));
       
       // Transform API data to match frontend interface
-      const transformedVaults: BattleVault[] = vaultsData.map((vault, index) => ({
-        // Core vault data
-        vault_id: vault.vault_id,
-        vault_name: vault.vault_name,
-        vault_strategy: vault.vault_strategy,
-        total_value_locked: Number(vault.total_value_locked) || 0,
-        current_roi: Number(vault.current_roi) || 0,
-        participants_count: Number(vault.participants_count) || 0,
-        battle_status: vault.battle_status || 'active',
-        risk_level: vault.risk_level,
-        apy: vault.apy || Number(vault.current_roi) || 0,
+        const transformedVaults: BattleVault[] = vaultsData.map((vault, index) => ({
+          // Core vault data (now with dummy data from API)
+          vault_id: vault.vault_id,
+          vault_name: vault.vault_name,
+          vault_strategy: vault.vault_strategy,
+          total_value_locked: Number(vault.total_value_locked) || 0,
+          current_roi: Number(vault.current_roi) || 0,
+          participants_count: Number(vault.participants_count) || 0,
+          battle_status: vault.battle_status || 'active',
+          risk_level: vault.risk_level || 'Medium',
+          apy: vault.apy || Number(vault.current_roi) || 0,
         
         // Map API fields to frontend fields
         id: Number(vault.vault_id) || index + 1,

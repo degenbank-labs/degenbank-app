@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
 import {
   UserIcon,
   WalletIcon,
@@ -36,6 +37,7 @@ export function MainNavbar() {
     authenticated,
   } = useAuth();
 
+  const { balance, isLoading: balanceLoading, tokenSymbol } = useTokenBalance();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -249,6 +251,21 @@ export function MainNavbar() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
+                  
+                  {/* Balance Display */}
+                  <DropdownMenuItem className="rounded-none cursor-default">
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-sm font-medium text-gray-600">Balance:</span>
+                      <span className="text-sm font-semibold">
+                        {balanceLoading ? (
+                          "Loading..."
+                        ) : (
+                          `${balance.toFixed(4)} ${tokenSymbol}`
+                        )}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  
                   {walletAddress && (
                     <DropdownMenuItem
                       onClick={() => handleCopyAddress(walletAddress)}

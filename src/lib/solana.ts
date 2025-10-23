@@ -8,16 +8,50 @@ import {
 } from "@solana/web3.js";
 
 // Solana configuration
-export const SOLANA_RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+const getNetworkConfig = () => {
+  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "development";
+  
+  if (network === "development") {
+    // Development uses devnet with fkSOL token
+    return {
+      rpcUrl: "https://api.devnet.solana.com",
+      tokenMint: new PublicKey("6mHmTJ3irg5MnYraS4XAZddcJfd6BmDdvsRvzDnsimke"), // fkSOL
+      tokenSymbol: "fkSOL"
+    };
+  } else if (network === "devnet") {
+    // Devnet uses native SOL
+    return {
+      rpcUrl: "https://api.devnet.solana.com",
+      tokenMint: new PublicKey("So11111111111111111111111111111111111111112"), // Native SOL
+      tokenSymbol: "SOL"
+    };
+  } else if (network === "mainnet-beta") {
+    // Mainnet uses native SOL
+    return {
+      rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
+      tokenMint: new PublicKey("So11111111111111111111111111111111111111112"), // Native SOL
+      tokenSymbol: "SOL"
+    };
+  } else {
+    // Default to development config
+    return {
+      rpcUrl: "https://api.devnet.solana.com",
+      tokenMint: new PublicKey("6mHmTJ3irg5MnYraS4XAZddcJfd6BmDdvsRvzDnsimke"), // fkSOL
+      tokenSymbol: "fkSOL"
+    };
+  }
+};
+
+const networkConfig = getNetworkConfig();
+
+export const SOLANA_RPC_URL = networkConfig.rpcUrl;
+export const TOKEN_MINT = networkConfig.tokenMint;
+export const TOKEN_SYMBOL = networkConfig.tokenSymbol;
 export const PROGRAM_ID = new PublicKey(
-  "D48CDyR4fnT57dTUnH2LYEYJA3CmoSMSEJpxa1TPKNPU"
+  "GoXfRMXGPgf91TSUViswPtnfEbTj4c9D6uqJe3VcPx6q"
 );
 export const VAULT_PDA = new PublicKey(
   "4KbdwX1vhADhW6xonCvEp6hdVLKMsJatbUbYompER32q"
-);
-export const SOL_DUMMY_TOKEN = new PublicKey(
-  "6mHmTJ3irg5MnYraS4XAZddcJfd6BmDdvsRvzDnsimke"
 );
 
 // Connection instance

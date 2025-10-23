@@ -49,6 +49,8 @@ export interface Vault {
   vault_address: string;
   token_program: string;
   token_address: string;
+  vault_token_address?: string;
+  vault_token_mint?: string;
   locked_start: string;
   locked_end: string;
   vault_strategy: string;
@@ -111,6 +113,27 @@ export interface VaultPerformanceUpdate {
   participants_count?: number;
 }
 
+// Helper function to generate dummy performance data
+export const generateDummyVaultData = (vault: Vault): Vault => {
+  const baseROI = Math.random() * 30 - 5; // Random ROI between -5% and 25%
+  const baseTVL = Math.floor(Math.random() * 10000000) + 100000; // Random TVL between 100k and 10M
+  
+  return {
+    ...vault,
+    current_roi: baseROI,
+    daily_performance: baseROI * 0.1 + (Math.random() * 2 - 1), // Daily variation
+    weekly_performance: baseROI * 0.5 + (Math.random() * 5 - 2.5), // Weekly variation
+    monthly_performance: baseROI + (Math.random() * 10 - 5), // Monthly variation
+    total_value_locked: baseTVL,
+    share_price: 1 + (baseROI / 100),
+    participants_count: Math.floor(Math.random() * 500) + 10, // 10-510 participants
+    apy: Math.max(0, baseROI + Math.random() * 10), // APY slightly higher than ROI
+    risk_level: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)] as 'Low' | 'Medium' | 'High',
+    deposit_asset: ['SOL', 'USDC', 'USDT', 'ETH'][Math.floor(Math.random() * 4)],
+    min_deposit: [50, 100, 250, 500, 1000][Math.floor(Math.random() * 5)],
+  };
+};
+
 // Battle interfaces
 export interface Battle {
   battleId: number;
@@ -122,6 +145,7 @@ export interface Battle {
   programAddress: string;
   treasuryAddress: string;
   ownerAddress: string;
+  pdaAddress: string;
   isAvailable: boolean;
   vaults?: Vault[];
 }
@@ -271,17 +295,24 @@ class ApiService {
   // Vault API methods
   async getVault(id: string): Promise<Vault> {
     const response = await this.request<Vault>(`/vault/${id}`);
-    return response.data;
+    // Add dummy performance data for missing fields
+    return generateDummyVaultData(response.data);
   }
 
   async getAllVaults(skip: number = 0, limit: number = 10): Promise<GetVaultsResponse> {
     const response = await this.request<GetVaultsResponse>(`/vault?skip=${skip}&limit=${limit}`);
-    return response.data;
+    // Add dummy performance data for all vaults
+    const vaultsWithDummyData = response.data.results.map(vault => generateDummyVaultData(vault));
+    return {
+      ...response.data,
+      results: vaultsWithDummyData
+    };
   }
 
   async getVaultsByBattleId(battleId: number): Promise<Vault[]> {
     const response = await this.request<Vault[]>(`/vault/battle/${battleId}`);
-    return response.data;
+    // Add dummy performance data for battle vaults
+    return response.data.map(vault => generateDummyVaultData(vault));
   }
 
   async getVaultPerformance(vaultId: string, period: string = '14D'): Promise<VaultPerformanceResponse> {

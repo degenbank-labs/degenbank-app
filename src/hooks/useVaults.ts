@@ -56,13 +56,13 @@ export const useVaults = () => {
           id: vault.vault_id,
           name: vault.vault_name,
           strategy: vault.vault_strategy,
-          // Use real performance data from backend with robust number conversion
+          // Use performance data from backend (now includes dummy data)
           performance: {
             daily: Number(vault.daily_performance) || 0,
             weekly: Number(vault.weekly_performance) || 0,
             monthly: Number(vault.monthly_performance) || 0,
           },
-          // Use real APY from backend
+          // Use APY from backend (now includes dummy data)
           apy: Number(vault.apy) || 0,
           // Calculate age based on creation date
           age: vault.created_at 
@@ -70,15 +70,15 @@ export const useVaults = () => {
             : 'N/A',
           // Use vault image or default
           symbolImage: vault.vault_image || "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-          // Use real TVL from backend
+          // Use TVL from backend (now includes dummy data)
           tvl: Number(vault.total_value_locked) || 0,
           // Determine manager type based on vault type
           managerType: vault.vault_type === 'banker' ? 'verified' : 'ecosystem',
-          // Use real risk level from backend
+          // Use risk level from backend (now includes dummy data)
           risk: vault.risk_level || 'Medium',
-          // Use real deposit asset from backend
+          // Use deposit asset from backend (now includes dummy data)
           depositAsset: vault.deposit_asset || 'USDC',
-          // Use real minimum deposit from backend
+          // Use minimum deposit from backend (now includes dummy data)
           minDeposit: Number(vault.min_deposit) || 100,
           // Use battle status or default to Active
           status: vault.is_disqualified ? 'Disqualified' : (vault.battle_status || 'Active'),
@@ -137,20 +137,32 @@ export const useVaults = () => {
           id: vault.vault_id,
           name: vault.vault_name,
           strategy: vault.vault_strategy,
+          // Use performance data from backend (now includes dummy data)
           performance: {
-            daily: Math.random() * 2 - 1,
-            weekly: Math.random() * 10 - 5,
-            monthly: Math.random() * 20 - 10,
+            daily: Number(vault.daily_performance) || 0,
+            weekly: Number(vault.weekly_performance) || 0,
+            monthly: Number(vault.monthly_performance) || 0,
           },
-          apy: Math.random() * 30 + 5,
-          age: `${Math.floor(Math.random() * 90 + 1)} days`,
+          // Use APY from backend (now includes dummy data)
+          apy: Number(vault.apy) || 0,
+          // Calculate age based on creation date
+          age: vault.created_at 
+            ? `${Math.floor((Date.now() - new Date(vault.created_at).getTime()) / (1000 * 60 * 60 * 24))} days`
+            : 'N/A',
+          // Use vault image or default
           symbolImage: vault.vault_image || "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
-          tvl: Math.floor(Math.random() * 20000000 + 1000000),
-          managerType: Math.random() > 0.4 ? 'verified' : 'ecosystem',
-          risk: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)] as 'Low' | 'Medium' | 'High',
-          depositAsset: ['USDC', 'SOL', 'USDT'][Math.floor(Math.random() * 3)],
-          minDeposit: Math.floor(Math.random() * 1000 + 50),
-          status: 'Active',
+          // Use TVL from backend (now includes dummy data)
+          tvl: Number(vault.total_value_locked) || 0,
+          // Determine manager type based on manager KYB status
+          managerType: vault.manager?.is_kyb ? 'verified' : 'ecosystem',
+          // Use risk level from backend (now includes dummy data)
+          risk: (vault.risk_level as 'Low' | 'Medium' | 'High') || 'Medium',
+          // Use deposit asset from backend (now includes dummy data)
+          depositAsset: vault.deposit_asset || 'SOL',
+          // Use min deposit from backend (now includes dummy data)
+          minDeposit: Number(vault.min_deposit) || 0,
+          // Use battle status or default to Active
+          status: vault.battle_status || 'Active',
         };
       }
       return null;
