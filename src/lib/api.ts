@@ -136,18 +136,36 @@ export const generateDummyVaultData = (vault: Vault): Vault => {
 
 // Battle interfaces
 export interface Battle {
-  battleId: number;
-  battleName: string;
-  battleImage: string;
-  battleDescription: string;
-  battleStart: string;
-  battleEnd: string;
-  programAddress: string;
-  treasuryAddress: string;
-  ownerAddress: string;
-  pdaAddress: string;
-  isAvailable: boolean;
+  battle_id: number;
+  battle_name: string;
+  battle_image: string;
+  battle_description: string;
+  battle_start: string;
+  battle_end: string;
+  program_address: string;
+  treasury_address: string;
+  owner_address: string;
+  pda_address: string;
+  is_available: boolean;
+  arena_type?: string;
+  current_phase?: string;
+  prize_pool?: number;
+  winner_vault_id?: string;
+  arena_color?: string;
+  battle_status?: string;
   vaults?: Vault[];
+  // Legacy fields for backward compatibility
+  battleId?: number;
+  battleName?: string;
+  battleImage?: string;
+  battleDescription?: string;
+  battleStart?: string;
+  battleEnd?: string;
+  programAddress?: string;
+  treasuryAddress?: string;
+  ownerAddress?: string;
+  pdaAddress?: string;
+  isAvailable?: boolean;
 }
 
 export interface GetBattlesResponse {

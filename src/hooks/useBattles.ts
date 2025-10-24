@@ -51,8 +51,8 @@ export function useBattles() {
         const transformedBattles: BattleWithMetrics[] = response.results.map((battle: Battle, index: number) => ({
           ...battle,
           // Map API fields to frontend fields
-          id: battle.battleId.toString(),
-          name: battle.battleName || `Battle Arena #${index + 1}`,
+          id: (battle.battle_id || battle.battleId || index + 1).toString(),
+          name: battle.battle_name || battle.battleName || `Battle Arena #${index + 1}`,
           type: 'Mixed Strategy', // Not in API yet
           status: 'Ongoing Battle', // Not in API yet
           phase: 'Battle Phase', // Not in API yet
@@ -63,7 +63,7 @@ export function useBattles() {
           activeVaults: Math.floor(Math.random() * 8 + 2),
           participants: Math.floor(Math.random() * 150 + 20),
           prizePool: Math.floor(Math.random() * 75000 + 15000),
-          description: battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
+          description: battle.battle_description || battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
           color: ['#6fb7a5', '#FB605C', '#FFB800', '#9333EA'][index % 4],
           cubePosition: { 
             row: Math.floor(index / 2), 
@@ -99,8 +99,8 @@ export function useBattles() {
         return {
           ...battle,
           // Map API fields to frontend fields
-          id: battle.battleId.toString(),
-          name: battle.battleName || `Battle Arena`,
+          id: (battle.battle_id || battle.battleId || '1').toString(),
+          name: battle.battle_name || battle.battleName || `Battle Arena`,
           type: 'Mixed Strategy', // Not in API yet
           status: 'Ongoing Battle', // Not in API yet
           phase: 'Battle Phase', // Not in API yet
@@ -109,7 +109,7 @@ export function useBattles() {
           activeVaults: Math.floor(Math.random() * 8 + 2),
           participants: Math.floor(Math.random() * 150 + 20),
           prizePool: Math.floor(Math.random() * 75000 + 15000),
-          description: battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
+          description: battle.battle_description || battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
           color: '#6fb7a5',
           cubePosition: { row: 0, col: 0 },
         };

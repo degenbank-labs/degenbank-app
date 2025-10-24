@@ -94,10 +94,10 @@ export const useVaultOperations = () => {
       connection,
       {
         publicKey: walletAddress,
-        signTransaction: async (tx) => {
+        signTransaction: async () => {
           throw new Error("Wallet does not support transaction signing");
         },
-        signAllTransactions: async (txs) => {
+        signAllTransactions: async () => {
           throw new Error(
             "Wallet does not support multiple transaction signing"
           );
@@ -291,7 +291,7 @@ export const useVaultOperations = () => {
 
       return program
         ? program.methods
-            .deposit(amount)
+            .withdraw(new BN(amount.toString()))
             .accountsStrict({
               battle: battlePubkey,
               vault: vaultPubkey,
@@ -714,7 +714,12 @@ export const useVaultOperations = () => {
           userPubkey,
           amountBigInt
         );
-        transaction.add(withdrawIx);
+
+        if (withdrawIx) {
+          transaction.add(withdrawIx);
+        } else {
+          throw new Error("Failed to create withdraw instruction");
+        }
 
         // Send transaction
         const signature = await sendTransaction(transaction);
