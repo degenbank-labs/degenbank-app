@@ -1,28 +1,9 @@
 import { useState, useEffect } from 'react';
 import { apiService, Vault } from '@/lib/api';
 
-export interface BattleVault {
-  // Core vault data
-  vault_id: string;
-  vault_name: string;
-  vault_strategy: string;
-  total_value_locked: number;
-  current_roi: number;
-  participants_count: number;
-  battle_status: string;
-  risk_level?: 'Low' | 'Medium' | 'High';
-  apy?: number;
-  
-  // Additional fields for battle display
-  id: number;
-  name: string;
-  strategy: string;
-  manager: string;
-  tvl: number;
-  participants: number;
-  performance: number;
-  risk: 'Low' | 'Medium' | 'High';
-  status: string;
+export interface BattleVault extends Vault {
+  // Additional fields for battle display only
+  managerName: string;
   color: string;
 }
 
@@ -41,37 +22,15 @@ export const useBattleVaults = (battleId: string) => {
       const vaultsData = await apiService.getVaultsByBattleId(Number(battleId));
       
       // Transform API data to match frontend interface
-        const transformedVaults: BattleVault[] = vaultsData.map((vault, index) => ({
-          // Core vault data (now with dummy data from API)
-          vault_id: vault.vault_id,
-          vault_name: vault.vault_name,
-          vault_strategy: vault.vault_strategy,
-          total_value_locked: Number(vault.total_value_locked) || 0,
-          current_roi: Number(vault.current_roi) || 0,
-          participants_count: Number(vault.participants_count) || 0,
-          battle_status: vault.battle_status || 'active',
-          risk_level: vault.risk_level || 'Medium',
-          apy: vault.apy || Number(vault.current_roi) || 0,
-        
-        // Map API fields to frontend fields
-        id: Number(vault.vault_id) || index + 1,
-        name: vault.vault_name,
-        strategy: vault.vault_strategy,
-        manager: vault.manager?.manager_name || `Manager ${index + 1}`,
-        tvl: Number(vault.total_value_locked) || 0,
-        participants: Number(vault.participants_count) || 0,
-        // Calculate performance from current_roi
-        performance: Number(vault.current_roi) || 0,
-        // Determine risk level based on performance volatility or use existing risk_level
-        risk: vault.risk_level || (['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)] as 'Low' | 'Medium' | 'High'),
-        // Set status based on battle_status or default to active
-        status: vault.battle_status || 'active',
-        // Assign colors for UI display
+      const transformedVaults: BattleVault[] = vaultsData.map((vault, index) => ({
+        ...vault,
+        // Only add computed frontend fields
+        managerName: vault.manager?.manager_name || `Manager ${index + 1}`,
         color: ['#6fb7a5', '#FB605C', '#FFB800', '#9333EA'][index % 4],
       }));
 
       // Sort by performance (current_roi) descending
-      transformedVaults.sort((a, b) => b.performance - a.performance);
+      transformedVaults.sort((a, b) => (b.current_roi || 0) - (a.current_roi || 0));
 
       setVaults(transformedVaults);
     } catch (err) {

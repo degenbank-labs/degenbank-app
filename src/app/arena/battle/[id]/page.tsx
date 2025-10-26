@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { MainNavbar } from "@/components/main-navbar";
 import LightRays from "@/components/ui/light-rays";
 import { Button } from "@/components/ui/button";
@@ -20,33 +20,48 @@ import { Loader2 } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 import { useBattleVaults } from "@/hooks/useBattleVaults";
 
-// Battle phases data - this could also be made dynamic in the future
+// Helper function to get battle phases based on current phase
+const getBattlePhases = (currentPhase: string, timeRemaining: string) => {
+  const phases = [
+    { name: "Stake Phase", key: "Stake Phase" },
+    { name: "Battle Phase", key: "Battle Phase" },
+    { name: "Completed", key: "Completed" },
+  ];
 
-const battlePhases = [
-  { name: "Stake Phase", status: "completed", duration: "3 days" },
-  { name: "Lock Phase", status: "completed", duration: "1 day" },
-  { name: "Battle Phase", status: "active", duration: "12 days remaining" },
-  { name: "Resolution", status: "pending", duration: "1 day" },
-];
+  return phases.map((phase) => {
+    let status = "pending";
+    let duration = "";
+
+    if (phase.key === currentPhase) {
+      status = "active";
+      duration = timeRemaining;
+    } else if (
+      (phase.key === "Stake Phase" &&
+        (currentPhase === "Battle Phase" || currentPhase === "Completed")) ||
+      (phase.key === "Battle Phase" && currentPhase === "Completed")
+    ) {
+      status = "completed";
+      duration = "Completed";
+    } else {
+      status = "pending";
+      duration = "Pending";
+    }
+
+    return { ...phase, status, duration };
+  });
+};
 
 export default function BattleDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const battleId = params.id as string;
-  const [selectedVault, setSelectedVault] = useState<number | null>(null);
-  const [stakeAmount, setStakeAmount] = useState("");
-  const [isStaking, setIsStaking] = useState(false);
+  const [selectedVault, setSelectedVault] = useState<string | null>(null);
 
   // Use battles hook for real data
   const { getBattleById, loading, error } = useBattles();
-  const [battle, setBattle] = useState<{
-    id: string;
-    name: string;
-    description: string;
-    type: string;
-    status: string;
-    phase: string;
-  } | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState("12d 14h 32m");
+  const [battle, setBattle] = useState<
+    import("@/hooks/useBattles").BattleWithMetrics | null
+  >(null);
 
   // Use battle vaults hook for real vault data
   const {
@@ -69,18 +84,40 @@ export default function BattleDetailPage() {
     fetchBattle();
   }, [battleId, getBattleById]);
 
-  // Sort vaults by performance for leaderboard (already sorted in hook)
-  const sortedVaults = battleVaults;
-
+  // Real-time duration update
   useEffect(() => {
-    // Simulate countdown timer
     const interval = setInterval(() => {
-      // This would be real countdown logic
-      setTimeRemaining("12d 14h 31m");
-    }, 60000);
+      if (battle) {
+        const fetchBattle = async () => {
+          try {
+            const battleData = await getBattleById(battleId);
+            setBattle(battleData);
+          } catch (err) {
+            console.error("Failed to refresh battle:", err);
+          }
+        };
+        fetchBattle();
+      }
+    }, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [battle, battleId, getBattleById]);
+
+  // Get dynamic battle phases
+  const battlePhases = battle
+    ? getBattlePhases(
+        battle.current_phase,
+        battle.timeRemaining || "Loading..."
+      )
+    : [];
+
+  // Handle Enter Battle navigation
+  const handleEnterBattle = (vaultId: string) => {
+    router.push(`/vaults/strategy-vaults/${vaultId}?from=battle&battleId=${battleId}`);
+  };
+
+  // Sort vaults by performance for leaderboard (already sorted in hook)
+  const sortedVaults = battleVaults;
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
@@ -183,29 +220,12 @@ export default function BattleDetailPage() {
             <div className="mb-8 text-center">
               <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
                 <span className="text-white">
-                  {battle?.name || "Battle Arena"}{" "}
-                </span>
-                <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
-                  #{battleId}
+                  {battle?.battle_name || "Battle Arena"}{" "}
                 </span>
               </h1>
 
               <p className="mx-auto mb-6 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
-                {battle?.description || (
-                  <>
-                    <span className="text-primary font-semibold">
-                      Vault managers compete with strategy.
-                    </span>
-                    <br />
-                    <span className="text-white/80">
-                      Users stake with conviction.
-                    </span>
-                    <br />
-                    <span className="text-primary font-semibold">
-                      The best vault wins it all.
-                    </span>
-                  </>
-                )}
+                {battle?.battle_description}
               </p>
 
               {/* Battle Status */}
@@ -214,37 +234,40 @@ export default function BattleDetailPage() {
                   variant="outline"
                   className="border-primary text-primary rounded-none px-4 py-2"
                 >
-                  {battle?.type || "DCA Arena"} - {battle?.phase || "Phase #1"}
+                  {battle?.arena_type || "DCA Arena"} -{" "}
+                  {battle?.current_phase || "Phase #1"}
                 </Badge>
                 <Badge
                   variant="outline"
                   className="rounded-none border-purple-400 px-4 py-2 text-purple-400"
                 >
                   <ClockIcon className="mr-2 h-4 w-4" />
-                  {timeRemaining}
+                  {battle?.timeRemaining || "Loading..."}
                 </Badge>
               </div>
             </div>
 
             {/* Battle Phases Progress */}
             <div className="mx-auto mb-12 max-w-4xl">
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                {battlePhases.map((phase, index) => (
+              <div className="grid grid-cols-3 gap-4">
+                {battlePhases.map((phase) => (
                   <div key={phase.name} className="text-center">
                     <div
                       className={`mb-2 h-2 w-full ${
                         phase.status === "completed"
-                          ? "bg-purple-400"
+                          ? "bg-primary"
                           : phase.status === "active"
-                            ? "to-primary bg-gradient-to-r from-purple-400"
-                            : "bg-gray-700"
+                            ? "to-primary from-primary bg-gradient-to-r"
+                            : "bg-neutral-800"
                       }`}
                     />
                     <h3
                       className={`text-sm font-semibold ${
                         phase.status === "active"
                           ? "text-primary"
-                          : "text-white/60"
+                          : phase.status === "completed"
+                            ? "text-primary"
+                            : "text-white/60"
                       }`}
                     >
                       {phase.name}
@@ -278,32 +301,32 @@ export default function BattleDetailPage() {
                 <div className="space-y-4">
                   {sortedVaults.map((vault, index) => (
                     <Card
-                      key={vault.id}
+                      key={vault.vault_id}
                       className={`bg-card/50 border-border/50 hover:bg-card/70 rounded-none backdrop-blur-sm transition-all duration-300 ${
-                        selectedVault === vault.id
+                        selectedVault === vault.vault_id
                           ? "border-primary ring-primary/30 shadow-primary/20 shadow-lg ring-2"
                           : "border-border/50"
                       }`}
-                      onClick={() => setSelectedVault(vault.id)}
+                      onClick={() => setSelectedVault(vault.vault_id)}
                     >
                       <CardContent className="p-6">
                         <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center space-x-4">
                             <div>
                               <h3 className="font-cirka text-2xl font-bold text-white">
-                                {vault.name}
+                                {vault.vault_name}
                               </h3>
                               <p className="text-sm text-white/60">
-                                {vault.strategy}
+                                {vault.vault_strategy}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            {getStatusIcon(vault.status)}
+                            {getStatusIcon(vault.battle_status || "active")}
                             <span
-                              className={`text-sm font-semibold ${getRiskColor(vault.risk)}`}
+                              className={`text-sm font-semibold ${getRiskColor(vault.risk_level || "Medium")}`}
                             >
-                              {vault.risk} Risk
+                              {vault.risk_level || "Medium"} Risk
                             </span>
                           </div>
                         </div>
@@ -315,25 +338,29 @@ export default function BattleDetailPage() {
                             </p>
                             <p
                               className={`text-lg font-bold ${
-                                vault.performance > 0
+                                (vault.current_roi || 0) > 0
                                   ? "text-green-400"
                                   : "text-red-400"
                               }`}
                             >
-                              {vault.performance > 0 ? "+" : ""}
-                              {vault.performance}%
+                              {(vault.current_roi || 0) > 0 ? "+" : ""}
+                              {(vault.current_roi || 0).toFixed(1)}%
                             </p>
                           </div>
                           <div>
                             <p className="mb-1 text-xs text-white/60">APY</p>
                             <p className="text-lg font-bold text-white">
-                              {vault.apy}%
+                              {(vault.apy || 0).toFixed(1)}%
                             </p>
                           </div>
                           <div>
                             <p className="mb-1 text-xs text-white/60">TVL</p>
                             <p className="text-lg font-bold text-white">
-                              ${(vault.tvl / 1000).toFixed(0)}K
+                              $
+                              {((vault.total_value_locked || 0) / 1000).toFixed(
+                                0
+                              )}
+                              K
                             </p>
                           </div>
                           <div>
@@ -342,7 +369,7 @@ export default function BattleDetailPage() {
                             </p>
                             <p className="flex items-center text-lg font-bold text-white">
                               <UsersIcon className="mr-1 h-4 w-4" />
-                              {vault.participants}
+                              {vault.participants_count || 0}
                             </p>
                           </div>
                         </div>
@@ -351,14 +378,14 @@ export default function BattleDetailPage() {
                           <div className="mb-1 flex justify-between text-xs text-white/60">
                             <span>Performance Progress</span>
                             <span>
-                              {vault.performance > 0 ? "+" : ""}
-                              {vault.performance}%
+                              {(vault.current_roi || 0) > 0 ? "+" : ""}
+                              {(vault.current_roi || 0).toFixed(1)}%
                             </span>
                           </div>
                           <Progress
                             value={Math.max(
                               0,
-                              Math.min(100, (vault.performance + 10) * 5)
+                              Math.min(100, ((vault.current_roi || 0) + 10) * 5)
                             )}
                             className="h-2"
                           />
@@ -368,13 +395,14 @@ export default function BattleDetailPage() {
                           <p className="text-xs text-white/60">
                             Manager:{" "}
                             <span className="text-primary">
-                              {vault.manager}
+                              {vault.managerName}
                             </span>
                           </p>
                           <Button
                             size="sm"
                             variant="default"
                             className="border-primary hover:bg-primary/80 cursor-pointer font-semibold text-black transition-all duration-300 hover:text-black"
+                            onClick={() => handleEnterBattle(vault.vault_id)}
                           >
                             Enter Battle
                           </Button>
@@ -400,27 +428,46 @@ export default function BattleDetailPage() {
                   <CardContent className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-white/60">Total TVL</span>
-                      <span className="font-bold text-white">$281K</span>
+                      <span className="font-bold text-white">
+                        $
+                        {(
+                          battleVaults.reduce(
+                            (sum, vault) =>
+                              sum + (vault.total_value_locked || 0),
+                            0
+                          ) / 1000
+                        ).toFixed(0)}
+                        K
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/60">Active Vaults</span>
-                      <span className="font-bold text-white">3</span>
+                      <span className="font-bold text-white">
+                        {battleVaults.length}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/60">Total Stakers</span>
-                      <span className="font-bold text-white">105</span>
+                      <span className="font-bold text-white">
+                        {battleVaults.reduce(
+                          (sum, vault) => sum + (vault.participants_count || 0),
+                          0
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between border-t border-white/20 pt-3">
                       <span className="text-primary font-semibold">
                         Prize Pool
                       </span>
                       <span className="text-primary text-lg font-bold">
-                        $21.2K
+                        ${((battle?.prize_pool || 0) / 1000).toFixed(1)}K
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-white/60">Battle Duration</span>
-                      <span className="font-bold text-white">14 days</span>
+                      <span className="font-bold text-white">
+                        {battle?.timeRemaining || "Loading..."}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
