@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  UserGroupIcon,
-  ShieldCheckIcon,
   TrophyIcon,
   ArrowUpIcon,
   ArrowDownIcon,
@@ -47,71 +44,6 @@ export default function StrategyVaultsPage() {
     return `${numericAPY.toFixed(1)}%`;
   };
 
-  const getRiskBadge = (risk: string) => {
-    switch (risk) {
-      case "Low":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-profit/10 text-profit hover:bg-profit/20 rounded-none border-none"
-          >
-            Low Risk
-          </Badge>
-        );
-      case "Medium":
-        return (
-          <Badge
-            variant="secondary"
-            className="rounded-none border-none bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
-          >
-            Medium Risk
-          </Badge>
-        );
-      case "High":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-loss/10 text-loss hover:bg-loss/20 rounded-none border-none"
-          >
-            High Risk
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="secondary" className="rounded-none border-none">
-            {risk}
-          </Badge>
-        );
-    }
-  };
-
-  const getManagerTypeBadge = (managerType: string) => {
-    switch (managerType) {
-      case "verified":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-primary/10 text-primary hover:bg-primary/20 rounded-none border-none"
-          >
-            <ShieldCheckIcon className="mr-1 h-3 w-3" />
-            Verified
-          </Badge>
-        );
-      case "ecosystem":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-secondary rounded-none border-none text-purple-400/60 hover:text-purple-400"
-          >
-            <UserGroupIcon className="mr-1 h-3 w-3" />
-            Ecosystem
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
   const getBattleStatusBadge = (
     battleStatus?: string,
     isDisqualified?: boolean
@@ -133,20 +65,10 @@ export default function StrategyVaultsPage() {
         return (
           <Badge
             variant="secondary"
-            className="rounded-none border-none bg-orange-500/10 text-orange-500 hover:bg-orange-500/20"
+            className="rounded-none border-none bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
           >
             <FireIcon className="mr-1 h-3 w-3" />
             In Battle
-          </Badge>
-        );
-      case "winner":
-        return (
-          <Badge
-            variant="secondary"
-            className="rounded-none border-none bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
-          >
-            <TrophyIcon className="mr-1 h-3 w-3" />
-            Winner
           </Badge>
         );
       default:
@@ -154,15 +76,7 @@ export default function StrategyVaultsPage() {
     }
   };
 
-  const [selectedFilter, setSelectedFilter] = useState("all");
-
-  const filteredVaults = vaults.filter((vault) => {
-    if (selectedFilter === "all") return true;
-    if (selectedFilter === "verified") return vault.managerType === "verified";
-    if (selectedFilter === "ecosystem")
-      return vault.managerType === "ecosystem";
-    return true;
-  });
+  // Show all vaults without filtering
 
   const totalTVL = stats.totalTVL;
   const totalPnL = stats.totalPnL;
@@ -332,89 +246,29 @@ export default function StrategyVaultsPage() {
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap justify-center gap-4">
-          <Button
-            variant={selectedFilter === "all" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("all")}
-            className="cursor-pointer rounded-none"
-          >
+          <Button variant="default" className="cursor-pointer rounded-none">
             All Vaults ({vaults.length})
           </Button>
-          <Button
-            variant={selectedFilter === "verified" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("verified")}
-            className="cursor-pointer rounded-none"
-          >
-            <ShieldCheckIcon className="mr-2 h-4 w-4" />
-            Verified Managers (
-            {vaults.filter((v) => v.managerType === "verified").length})
-          </Button>
-          <Button
-            variant={selectedFilter === "ecosystem" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("ecosystem")}
-            className="cursor-pointer rounded-none"
-          >
-            <UserGroupIcon className="mr-2 h-4 w-4" />
-            Ecosystem Partners (
-            {vaults.filter((v) => v.managerType === "ecosystem").length})
-          </Button>
-        </div>
-
-        {/* Manager Type Cards */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Verified Vault Managers */}
-          <Card className="border-border rounded-none bg-black/80">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <ShieldCheckIcon className="text-primary h-5 w-5" />
-                <span>Verified Vault Managers</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Professional managers with verified track records and proven
-                strategies. Higher minimum deposits, institutional-grade
-                security.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Ecosystem Vault Managers */}
-          <Card className="border-border rounded-none bg-black/80">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <UserGroupIcon className="h-5 w-5 text-purple-400/60" />
-                <span>Ecosystem Vault Managers</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                Community-driven managers building innovative strategies.
-                Accessible entry points, experimental approaches.
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Vaults Grid */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredVaults.map((vault) => (
+          {vaults.map((vault) => (
             <Card
-              key={vault.id}
+              key={vault.vault_id}
               className="border-border hover:border-primary/50 rounded-none bg-black/70 transition-all duration-200 hover:bg-black/90"
             >
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
                     <img
-                      src={vault.symbolImage}
-                      alt={`${vault.name} symbol`}
-                      className="h-10 w-10 flex-shrink-0 rounded-lg object-cover"
+                      src={vault.vault_image || "/placeholder.svg"}
+                      alt={`${vault.vault_name} symbol`}
+                      className="h-8 w-8 rounded-full"
                     />
                     <div className="space-y-2">
-                      <CardTitle className="text-lg">{vault.name}</CardTitle>
+                      <CardTitle className="text-lg">{vault.vault_name}</CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        {getManagerTypeBadge(vault.managerType)}
-                        {getRiskBadge(vault.risk)}
                         {getBattleStatusBadge(
                           vault.battle_status,
                           vault.is_disqualified
@@ -422,26 +276,20 @@ export default function StrategyVaultsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-muted-foreground text-sm">TVL</div>
-                    <div className="text-lg font-bold text-white">
-                      {formatCurrency(vault.tvl)}
-                    </div>
-                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-muted-foreground text-sm">90D APY</div>
+                    <div className="text-muted-foreground text-sm">30D APY</div>
                     <div className="text-primary text-lg font-bold">
                       {formatAPY(vault.apy)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground text-sm">Age</div>
-                    <div className="text-sm font-medium text-white">
-                      {vault.age}
+                    <div className="text-muted-foreground text-sm">TVL</div>
+                    <div className="text-primary text-lg font-bold">
+                      {formatCurrency(vault.total_value_locked)}
                     </div>
                   </div>
                 </div>
@@ -456,80 +304,57 @@ export default function StrategyVaultsPage() {
                       <div className="text-muted-foreground">1D</div>
                       <div
                         className={`font-bold ${
-                          vault.performance.daily >= 0
+                          Number(vault.daily_performance) >= 0
                             ? "text-profit"
                             : "text-loss"
                         }`}
                       >
-                        {formatPercentage(vault.performance.daily)}
+                        {formatPercentage(vault.daily_performance)}
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">7D</div>
                       <div
                         className={`font-bold ${
-                          vault.performance.weekly >= 0
+                          Number(vault.weekly_performance) >= 0
                             ? "text-profit"
                             : "text-loss"
                         }`}
                       >
-                        {formatPercentage(vault.performance.weekly)}
+                        {formatPercentage(vault.weekly_performance)}
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">30D</div>
                       <div
                         className={`font-bold ${
-                          vault.performance.monthly >= 0
+                          Number(vault.monthly_performance) >= 0
                             ? "text-profit"
                             : "text-loss"
                         }`}
                       >
-                        {formatPercentage(vault.performance.monthly)}
+                        {formatPercentage(vault.monthly_performance)}
                       </div>
                     </div>
                   </div>
-
-                  {/* Battle Performance Indicator */}
-                  {(vault.battle_status === "active" ||
-                    vault.battle_status === "winner") && (
-                    <div className="mt-3 rounded border border-orange-500/20 bg-orange-500/10 p-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center text-orange-500">
-                          <FireIcon className="mr-1 h-3 w-3" />
-                          Battle ROI
-                        </div>
-                        <div className="font-bold text-orange-500">
-                          {vault.battle_status === "winner"
-                            ? "+24.5%"
-                            : "+12.3%"}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground mt-1 text-xs">
-                        {vault.battle_status === "winner"
-                          ? "🏆 Battle Winner"
-                          : "⚔️ Currently in battle"}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="text-muted-foreground">Deposit Asset</div>
                     <div className="font-medium text-white">
-                      {vault.depositAsset}
+                      {vault.deposit_asset}
                     </div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Min. Deposit</div>
                     <div className="font-medium text-white">
-                      {formatCurrency(vault.minDeposit)}
+                      {formatCurrency(vault.min_deposit)}
                     </div>
                   </div>
                 </div>
 
-                <Link href={`/vaults/strategy-vaults/${vault.id}`}>
+                <Link href={`/vaults/strategy-vaults/${vault.vault_id}`}>
                   <Button
                     className="w-full cursor-pointer rounded-none"
                     variant="outline"
@@ -570,7 +395,7 @@ export default function StrategyVaultsPage() {
                 variant="outline"
                 className="cursor-pointer rounded-none hover:bg-gray-900 hover:text-white"
               >
-                Submit Your Vault
+                Go to Arena
               </Button>
             </div>
           </CardContent>

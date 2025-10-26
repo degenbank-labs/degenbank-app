@@ -9,7 +9,7 @@ import {
   UserGroupIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -31,13 +31,19 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts";
-import { SolanaIconSvg } from "@/components/svg";
+import { UsdcIconSvg } from "@/components/svg";
 
 // Using VaultWithMetrics interface from useVaults hook instead of local VaultData interface
 
 export default function VaultDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const vaultId = params.id as string;
+  
+  // Get referrer information from URL parameters
+  const fromPage = searchParams.get('from');
+  const battleId = searchParams.get('battleId');
   const [activeTab, setActiveTab] = useState("vault-performance");
   const [selectedPeriod, setSelectedPeriod] = useState<"14D" | "30D">("30D");
   const [selectedChart, setSelectedChart] = useState<
@@ -70,6 +76,17 @@ export default function VaultDetailPage() {
 
   // Use real leaderboard data
   const { managers: leaderboardData } = useLeaderboard();
+
+  // Handle dynamic back navigation
+  const handleBackNavigation = () => {
+    if (fromPage === 'battle' && battleId) {
+      // Navigate back to specific battle detail page
+      router.push(`/arena/battle/${battleId}`);
+    } else {
+      // Default navigation to vaults list
+      router.push('/vaults/strategy-vaults');
+    }
+  };
 
   useEffect(() => {
     const fetchVault = async () => {
@@ -104,6 +121,41 @@ export default function VaultDetailPage() {
     }
 
     try {
+      // Pre-validate battle data if vault is associated with a battle
+      if (vaultData?.battle_id) {
+        console.log("Validating battle data before deposit...");
+        try {
+          const { apiService } = await import("@/lib/api");
+          const battleData = await apiService.getBattle(
+            vaultData.battle_id.toString()
+          );
+
+          if (!battleData) {
+            throw new Error(
+              `Battle data not found for battle ID: ${vaultData.battle_id}`
+            );
+          }
+
+          if (!battleData.pda_address && !battleData.pda_address) {
+            throw new Error(
+              `Battle ${battleData.battle_id} does not have a valid PDA address. The battle may not be properly initialized.`
+            );
+          }
+
+          console.log("✓ Battle data validated:", {
+            battle_id: battleData.battle_id,
+            battle_name: battleData.battle_name,
+            pda_address: battleData.pda_address || battleData.pda_address,
+            battle_status: battleData.battle_status,
+          });
+        } catch (battleError) {
+          console.error("Battle validation failed:", battleError);
+          throw new Error(
+            `Battle validation failed: ${battleError instanceof Error ? battleError.message : "Unknown error"}`
+          );
+        }
+      }
+
       const result = await deposit(vaultId, parseFloat(amount));
       if (result.success) {
         setAmount("");
@@ -191,9 +243,7 @@ export default function VaultDetailPage() {
           <p className="mb-6 text-neutral-400">
             The vault you&apos;re looking for doesn&apos;t exist.
           </p>
-          <Link href="/vaults/strategy-vaults">
-            <Button>Back to Vaults</Button>
-          </Link>
+          <Button onClick={handleBackNavigation}>Back</Button>
         </div>
       </div>
     );
@@ -272,15 +322,15 @@ export default function VaultDetailPage() {
         };
       case "sharePrice":
         return {
-          label: "Share Price (SOL)",
-          format: (value: number) => `${value.toFixed(3)} SOL`,
+          label: "Share Price (USDC)",
+          format: (value: number) => `${value.toFixed(3)} USDC`,
           color: "#6fb7a5",
           hasNegativeValues: false,
         };
       case "vaultBalance":
         return {
-          label: "Vault Balance (M SOL)",
-          format: (value: number) => `${value.toFixed(2)}M SOL`,
+          label: "Vault Balance (M USDC)",
+          format: (value: number) => `${value.toFixed(2)}M USDC`,
           color: "#8b5cf6",
           hasNegativeValues: false,
         };
@@ -339,12 +389,12 @@ export default function VaultDetailPage() {
     <div className="bg-background min-h-screen">
       {/* Header with Back Button */}
       <div className="mx-auto max-w-7xl px-4 pt-4">
-        <Link
-          href="/vaults/strategy-vaults"
-          className="text-muted-foreground flex items-center text-sm hover:text-white"
+        <button
+          onClick={handleBackNavigation}
+          className="text-muted-foreground flex items-center text-sm hover:text-white cursor-pointer"
         >
           ← Back
-        </Link>
+        </button>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
@@ -354,7 +404,7 @@ export default function VaultDetailPage() {
             {/* Symbol Image */}
             <div className="flex-shrink-0">
               <div className="bg-primary/20 flex h-12 w-12 items-center justify-center rounded-lg">
-                <SolanaIconSvg className="h-8 w-8" />
+                <UsdcIconSvg className="h-8 w-8" />
               </div>
             </div>
 
@@ -362,7 +412,7 @@ export default function VaultDetailPage() {
             <div className="w-full sm:w-auto">
               <div className="mb-1 flex items-center space-x-3">
                 <h1 className="text-xl font-bold text-white sm:text-2xl">
-                  {vaultData?.name || "Vault Name"}
+                  {vaultData?.vault_name || "Vault Name"}
                 </h1>
               </div>
               <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
@@ -376,11 +426,11 @@ export default function VaultDetailPage() {
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-2">
                     <span className="text-muted-foreground">Deposit:</span>
-                    <SolanaIconSvg className="h-4 w-4" />
+                    <UsdcIconSvg className="h-4 w-4" />
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-muted-foreground">Trading:</span>
-                    <SolanaIconSvg className="h-4 w-4" />
+                    <UsdcIconSvg className="h-4 w-4" />
                   </div>
                 </div>
               </div>
@@ -440,7 +490,7 @@ export default function VaultDetailPage() {
                 Strategy
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.vault_strategy || vaultData?.strategy || "N/A"}
+                {vaultData?.vault_strategy || "N/A"}
               </div>
             </div>
             <div className="border-border border-r px-4 py-4 sm:px-8">
@@ -453,8 +503,8 @@ export default function VaultDetailPage() {
                   ? (Number(vaultData.total_value_locked) / 1000000).toFixed(
                       1
                     ) + "M"
-                  : vaultData?.tvl && typeof vaultData.tvl === "number"
-                    ? (vaultData.tvl / 1000000).toFixed(1) + "M"
+                  : vaultData?.total_value_locked && typeof vaultData.total_value_locked === "number"
+                  ? (vaultData.total_value_locked / 1000000).toFixed(1) + "M"
                     : "0.0M"}
               </div>
             </div>
@@ -463,7 +513,7 @@ export default function VaultDetailPage() {
                 Risk Level
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.risk_level || vaultData?.risk || "Medium"}
+                {vaultData?.risk_level || "Medium"}
               </div>
             </div>
           </div>
@@ -805,7 +855,7 @@ export default function VaultDetailPage() {
                       </div>
                       <div className="bg-background border-border relative border">
                         <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
-                          <SolanaIconSvg width={20} height={20} />
+                          <UsdcIconSvg width={20} height={20} />
                           <span className="text-sm font-medium text-white">
                             {tokenSymbol}
                           </span>
@@ -829,7 +879,7 @@ export default function VaultDetailPage() {
                             ? "Loading..."
                             : `${balance.toFixed(4)} ${tokenSymbol}`}
                         </span>
-                        <SolanaIconSvg width={16} height={16} />
+                        <UsdcIconSvg width={16} height={16} />
                       </div>
                     </div>
 
@@ -958,7 +1008,7 @@ export default function VaultDetailPage() {
                       </span>
                     </Tooltip>
                     <div className="flex items-center gap-2">
-                      <SolanaIconSvg width={16} height={16} />
+                      <UsdcIconSvg width={16} height={16} />
                       {/* TODO: Integrate with user cumulative deposits API */}
                       <span className="font-medium text-white">0</span>
                     </div>
@@ -999,7 +1049,7 @@ export default function VaultDetailPage() {
                       </span>
                     </Tooltip>
                     <div className="flex items-center gap-2">
-                      <SolanaIconSvg width={16} height={16} />
+                      <UsdcIconSvg width={16} height={16} />
                       {/* TODO: Integrate with user fees paid API */}
                       <span className="font-medium text-white">0</span>
                     </div>
@@ -1012,7 +1062,7 @@ export default function VaultDetailPage() {
                       </span>
                     </Tooltip>
                     <div className="flex items-center gap-2">
-                      <SolanaIconSvg width={16} height={16} />
+                      <UsdcIconSvg width={16} height={16} />
                       {/* TODO: Integrate with user high-water mark API */}
                       <span className="font-medium text-white">0</span>
                     </div>
@@ -1072,7 +1122,7 @@ export default function VaultDetailPage() {
                     </div>
                     <div className="bg-background border-border relative border">
                       <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
-                        <SolanaIconSvg width={20} height={20} />
+                        <UsdcIconSvg width={20} height={20} />
                         <span className="text-sm font-medium text-white">
                           {tokenSymbol}
                         </span>
@@ -1096,7 +1146,7 @@ export default function VaultDetailPage() {
                           ? "Loading..."
                           : `${balance.toFixed(4)} ${tokenSymbol}`}
                       </span>
-                      <SolanaIconSvg width={16} height={16} />
+                      <UsdcIconSvg width={16} height={16} />
                     </div>
                   </div>
 
@@ -1206,19 +1256,19 @@ export default function VaultDetailPage() {
                           variant="outline"
                           className="text-primary border-primary rounded-none"
                         >
-                          {vaultData.strategy}
+                          {vaultData.vault_strategy}
                         </Badge>
                         <Badge
                           variant="outline"
                           className={`rounded-none ${
-                            vaultData.risk === "Low"
+                            vaultData.risk_level === "Low"
                               ? "text-profit border-profit"
-                              : vaultData.risk === "Medium"
+                              : vaultData.risk_level === "Medium"
                                 ? "border-yellow-400 text-yellow-400"
                                 : "text-loss border-loss"
                           }`}
                         >
-                          {vaultData.risk} Risk
+                          {vaultData.risk_level} Risk
                         </Badge>
                       </div>
                     </div>
@@ -1293,9 +1343,9 @@ export default function VaultDetailPage() {
                             Deposit Asset
                           </span>
                           <div className="flex items-center space-x-2">
-                            <SolanaIconSvg width={16} height={16} />
+                            <UsdcIconSvg width={16} height={16} />
                             <span className="font-medium text-white">
-                              {vaultData.depositAsset}
+                              {vaultData.deposit_asset}
                             </span>
                           </div>
                         </div>
@@ -1304,7 +1354,7 @@ export default function VaultDetailPage() {
                             Min Deposit
                           </span>
                           <span className="font-medium text-white">
-                            {vaultData.minDeposit} SOL
+                            {vaultData.min_deposit} USDC
                           </span>
                         </div>
                         {/* Max deposit removed - not available in VaultWithMetrics */}
@@ -1326,7 +1376,7 @@ export default function VaultDetailPage() {
                             variant="outline"
                             className="text-profit border-profit rounded-none"
                           >
-                            {vaultData.status}
+                            {vaultData.battle_status}
                           </Badge>
                         </div>
                       </div>
@@ -1386,7 +1436,7 @@ export default function VaultDetailPage() {
                       </div>
                       <div className="bg-background border-border relative border">
                         <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
-                          <SolanaIconSvg width={20} height={20} />
+                          <UsdcIconSvg width={20} height={20} />
                           <span className="text-sm font-medium text-white">
                             {tokenSymbol}
                           </span>
@@ -1410,7 +1460,7 @@ export default function VaultDetailPage() {
                             ? "Loading..."
                             : `${balance.toFixed(4)} ${tokenSymbol}`}
                         </span>
-                        <SolanaIconSvg width={16} height={16} />
+                        <UsdcIconSvg width={16} height={16} />
                       </div>
                     </div>
 

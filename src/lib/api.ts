@@ -134,38 +134,26 @@ export const generateDummyVaultData = (vault: Vault): Vault => {
   };
 };
 
-// Battle interfaces
+// Battle interfaces - Updated to match backend model exactly
 export interface Battle {
   battle_id: number;
   battle_name: string;
-  battle_image: string;
-  battle_description: string;
-  battle_start: string;
-  battle_end: string;
+  battle_image: string | null;
+  battle_description: string | null;
+  battle_start: string; // Date as ISO string
+  battle_end: string; // Date as ISO string
   program_address: string;
   treasury_address: string;
   owner_address: string;
   pda_address: string;
   is_available: boolean;
-  arena_type?: string;
-  current_phase?: string;
-  prize_pool?: number;
-  winner_vault_id?: string;
-  arena_color?: string;
-  battle_status?: string;
+  arena_type: 'DCA Strategy' | 'Lending Strategy' | 'Mixed Strategy' | 'Yield Farming';
+  current_phase: 'Registration' | 'Stake Phase' | 'Battle Phase' | 'Resolution Phase' | 'Completed';
+  prize_pool: number; // bigint from backend converted to number
+  winner_vault_id: string | null;
+  arena_color: string | null;
+  battle_status: 'active';
   vaults?: Vault[];
-  // Legacy fields for backward compatibility
-  battleId?: number;
-  battleName?: string;
-  battleImage?: string;
-  battleDescription?: string;
-  battleStart?: string;
-  battleEnd?: string;
-  programAddress?: string;
-  treasuryAddress?: string;
-  ownerAddress?: string;
-  pdaAddress?: string;
-  isAvailable?: boolean;
 }
 
 export interface GetBattlesResponse {

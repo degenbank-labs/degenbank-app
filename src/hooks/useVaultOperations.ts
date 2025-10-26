@@ -229,7 +229,7 @@ export const useVaultOperations = () => {
       const vtokenAccount = vaultTokenMint;
 
       const vaultTokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT, // This should be the deposit token (fkSOL), not vault token mint
+        TOKEN_MINT, // This should be the deposit token (USDC), not vault token mint
         vaultPubkey,
         true
       );
@@ -282,7 +282,7 @@ export const useVaultOperations = () => {
         true
       );
 
-      // vaultTokenAccount: vault's fkSOL account (for receiving deposits)
+      // vaultTokenAccount: vault's USDC account (for receiving deposits)
       const vaultTokenAccount = await getAssociatedTokenAddress(
         TOKEN_MINT,
         vaultPubkey,
@@ -335,8 +335,6 @@ export const useVaultOperations = () => {
         verifySignatures: false,
       });
 
-      console.log(transaction);
-
       const result = await selectedWallet.signAndSendTransaction({
         chain: `solana:devnet`,
         transaction: new Uint8Array(serializedTx),
@@ -373,7 +371,7 @@ export const useVaultOperations = () => {
 
         // Use vault_address instead of vault_id for PublicKey creation
         const vaultPubkey = new PublicKey(vaultData.vault_address);
-        const amountBigInt = BigInt(Math.floor(amount * 1e9)); // Convert to lamports
+        const amountBigInt = BigInt(Math.floor(amount * 1e6)); // Convert to USDC units (6 decimals)
 
         // Build transaction
         const transaction = new Transaction();
@@ -425,37 +423,37 @@ export const useVaultOperations = () => {
 
         // Get battle PDA or use provided address
         let battlePubkey: PublicKey;
+        let battleData = null;
+
         if (battleAddress) {
           battlePubkey = new PublicKey(battleAddress);
         } else {
           // Try to get battle PDA from vault's battle data
           if (vaultData.battle_id) {
             try {
-              const battleData = await apiService.getBattle(
+              battleData = await apiService.getBattle(
                 vaultData.battle_id.toString()
               );
-              if (battleData && battleData.pdaAddress) {
-                console.log(
-                  "Using battle PDA from database:",
-                  battleData.pdaAddress
-                );
-                battlePubkey = new PublicKey(battleData.pdaAddress);
+
+              if (battleData && battleData.pda_address) {
+                battlePubkey = new PublicKey(battleData.pda_address);
+              } else if (battleData && battleData.pda_address) {
+                // Fallback to legacy field name
+                battlePubkey = new PublicKey(battleData.pda_address);
               } else {
-                console.log("No battle PDA in database, calculating from user");
+                // Use battle owner address from database if available
+                const ownerPubkey = battleData?.owner_address
+                  ? new PublicKey(battleData.owner_address)
+                  : userPubkey;
                 const [battlePDA] =
-                  await solanaService.getBattlePDA(userPubkey);
+                  await solanaService.getBattlePDA(ownerPubkey);
                 battlePubkey = battlePDA;
               }
             } catch (error) {
-              console.log(
-                "Error fetching battle data, calculating from user:",
-                error
-              );
               const [battlePDA] = await solanaService.getBattlePDA(userPubkey);
               battlePubkey = battlePDA;
             }
           } else {
-            console.log("No battle_id in vault data, calculating from user");
             const [battlePDA] = await solanaService.getBattlePDA(userPubkey);
             battlePubkey = battlePDA;
           }
@@ -464,22 +462,11 @@ export const useVaultOperations = () => {
         // Get PDAs and token accounts
         // Try using vault itself as authority first
         const vtokenAuthority = vaultPubkey;
-        console.log("Using vault as authority:", {
-          vaultPubkey: vaultPubkey.toString(),
-          vtokenAuthority: vtokenAuthority.toString(),
-        });
 
         // Note: Vault authority PDA might not exist until vault is properly initialized
         // This is normal for new vaults
         const vtokenAuthorityInfo =
           await connection.getAccountInfo(vtokenAuthority);
-        if (vtokenAuthorityInfo) {
-          console.log("✓ Vault authority PDA exists");
-        } else {
-          console.log(
-            "⚠ Vault authority PDA does not exist yet (normal for new vaults)"
-          );
-        }
 
         // Get all required token accounts
         const depositorTokenAccount = await getAssociatedTokenAddress(
@@ -499,7 +486,6 @@ export const useVaultOperations = () => {
         );
 
         // Validate all required accounts before creating instructions
-        console.log("Validating accounts...");
 
         // Validate vault account
         const vaultAccountInfo = await connection.getAccountInfo(vaultPubkey);
@@ -508,45 +494,31 @@ export const useVaultOperations = () => {
             `Vault account does not exist: ${vaultPubkey.toString()}`
           );
         }
-        console.log("✓ Vault account exists", {
-          owner: vaultAccountInfo.owner.toString(),
-          lamports: vaultAccountInfo.lamports,
-          dataLength: vaultAccountInfo.data.length,
-          isOwnedByProgram: vaultAccountInfo.owner.equals(PROGRAM_ID),
-        });
 
         // Check if vault is owned by our program
         if (!vaultAccountInfo.owner.equals(PROGRAM_ID)) {
-          console.warn(
-            "⚠ Vault account is not owned by our program. Expected:",
-            PROGRAM_ID.toString(),
-            "Got:",
-            vaultAccountInfo.owner.toString()
-          );
+          // Vault account is not owned by our program
         }
 
         // Validate battle account
         const battleAccountInfo = await connection.getAccountInfo(battlePubkey);
         if (!battleAccountInfo) {
-          console.error(
-            "❌ Battle account does not exist:",
-            battlePubkey.toString()
-          );
-          console.log("Battle account derivation info:", {
-            userPubkey: userPubkey.toString(),
-            battlePubkey: battlePubkey.toString(),
-            programId: PROGRAM_ID.toString(),
-          });
-          throw new Error(
-            `Battle account does not exist: ${battlePubkey.toString()}. This battle may not be initialized yet. Please contact the administrator or try with a different battle address.`
-          );
+          // Provide more specific error message based on available data
+          let errorMessage = `Battle account does not exist: ${battlePubkey.toString()}.`;
+
+          if (battleData) {
+            errorMessage += ` Battle ID ${battleData.battle_id} (${battleData.battle_name || "Unknown"}) may not be properly initialized on-chain.`;
+            if (battleData.battle_status !== "active") {
+              errorMessage += ` Battle status is currently: ${battleData.battle_status}.`;
+            }
+          } else {
+            errorMessage += ` Unable to fetch battle data from database.`;
+          }
+
+          errorMessage += ` Please contact the administrator or try with a different battle address.`;
+
+          throw new Error(errorMessage);
         }
-        console.log("✓ Battle account exists", {
-          owner: battleAccountInfo.owner.toString(),
-          lamports: battleAccountInfo.lamports,
-          dataLength: battleAccountInfo.data.length,
-          isOwnedByProgram: battleAccountInfo.owner.equals(PROGRAM_ID),
-        });
 
         // Validate TOKEN_MINT
         const tokenMintInfo = await connection.getAccountInfo(TOKEN_MINT);
@@ -555,14 +527,12 @@ export const useVaultOperations = () => {
             `Token mint does not exist: ${TOKEN_MINT.toString()}`
           );
         }
-        console.log("✓ Token mint exists");
 
         // Check and create depositor token account if needed
         const depositorTokenAccountInfo = await connection.getAccountInfo(
           depositorTokenAccount
         );
         if (!depositorTokenAccountInfo) {
-          console.log("Creating depositor token account...");
           transaction.add(
             createAssociatedTokenAccountInstruction(
               userPubkey,
@@ -571,8 +541,6 @@ export const useVaultOperations = () => {
               TOKEN_MINT
             )
           );
-        } else {
-          console.log("✓ Depositor token account exists");
         }
 
         // Check and create depositor vtoken account if needed
@@ -580,7 +548,6 @@ export const useVaultOperations = () => {
           depositorVtokenAccount
         );
         if (!depositorVtokenAccountInfo) {
-          console.log("Creating depositor vault token account...");
           transaction.add(
             createAssociatedTokenAccountInstruction(
               userPubkey,
@@ -589,8 +556,6 @@ export const useVaultOperations = () => {
               vaultTokenMint
             )
           );
-        } else {
-          console.log("✓ Depositor vault token account exists");
         }
 
         // Check and create vtoken account if needed
@@ -614,7 +579,6 @@ export const useVaultOperations = () => {
         const vaultTokenAccountInfo =
           await connection.getAccountInfo(vaultTokenAccount);
         if (!vaultTokenAccountInfo) {
-          console.log("Creating vault token account...");
           transaction.add(
             createAssociatedTokenAccountInstruction(
               userPubkey,
@@ -623,8 +587,6 @@ export const useVaultOperations = () => {
               TOKEN_MINT
             )
           );
-        } else {
-          console.log("✓ Vault token account exists");
         }
 
         // Add deposit instruction
@@ -642,8 +604,6 @@ export const useVaultOperations = () => {
           throw new Error("Failed to create deposit instruction");
         }
 
-        console.log(deposit);
-
         // Send transaction (no additional signers needed since we're using existing mints)
         const signature = await sendTransaction(transaction, []);
 
@@ -656,7 +616,6 @@ export const useVaultOperations = () => {
         toast.success("Deposit successful!");
         return { success: true, signature };
       } catch (error) {
-        console.log(error);
         const errorMessage =
           error instanceof Error ? error.message : "Deposit failed";
         setDepositState({
@@ -693,7 +652,7 @@ export const useVaultOperations = () => {
 
         // Use vault_address instead of vault_id for PublicKey creation
         const vaultPubkey = new PublicKey(vaultData.vault_address);
-        const amountBigInt = BigInt(Math.floor(amount * 1e9)); // Convert to lamports
+        const amountBigInt = BigInt(Math.floor(amount * 1e6)); // Convert to USDC units (6 decimals)
 
         // Get battle PDA or use provided address
         let battlePubkey: PublicKey;

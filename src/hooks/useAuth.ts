@@ -201,7 +201,7 @@ export function useAuth() {
           error.message.includes("User already exists")
         ) {
           // User already exists, this is fine
-          console.log("User already exists in backend");
+  
         } else {
           toast.error("Failed to sync user data");
         }

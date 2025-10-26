@@ -9,35 +9,28 @@ import {
 
 // Solana configuration
 const getNetworkConfig = () => {
-  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "development";
+  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
   
-  if (network === "development") {
-    // Development uses devnet with fkSOL token
+  if (network === "devnet") {
+    // Devnet uses USDC
     return {
       rpcUrl: "https://api.devnet.solana.com",
-      tokenMint: new PublicKey("6mHmTJ3irg5MnYraS4XAZddcJfd6BmDdvsRvzDnsimke"), // fkSOL
-      tokenSymbol: "fkSOL"
+      tokenMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"), // USDC Devnet
+      tokenSymbol: "USDC"
     };
-  } else if (network === "devnet") {
-    // Devnet uses native SOL
-    return {
-      rpcUrl: "https://api.devnet.solana.com",
-      tokenMint: new PublicKey("So11111111111111111111111111111111111111112"), // Native SOL
-      tokenSymbol: "SOL"
-    };
-  } else if (network === "mainnet-beta") {
-    // Mainnet uses native SOL
+  } else if (network === "mainnet") {
+    // Mainnet uses USDC
     return {
       rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
-      tokenMint: new PublicKey("So11111111111111111111111111111111111111112"), // Native SOL
-      tokenSymbol: "SOL"
+      tokenMint: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"), // USDC Mainnet
+      tokenSymbol: "USDC"
     };
   } else {
-    // Default to development config
+    // Default to devnet config
     return {
       rpcUrl: "https://api.devnet.solana.com",
-      tokenMint: new PublicKey("6mHmTJ3irg5MnYraS4XAZddcJfd6BmDdvsRvzDnsimke"), // fkSOL
-      tokenSymbol: "fkSOL"
+      tokenMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"), // USDC Devnet
+      tokenSymbol: "USDC"
     };
   }
 };
@@ -117,7 +110,7 @@ export class SolanaService {
     }
   }
 
-  // Get SOL balance
+  // Get native SOL balance (for transaction fees)
   async getSolBalance(publicKey: PublicKey): Promise<number> {
     try {
       const balance = await this.connection.getBalance(publicKey);

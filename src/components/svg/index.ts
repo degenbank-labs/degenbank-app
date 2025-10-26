@@ -1,1 +1,1 @@
-export { default as SolanaIconSvg } from "./solana-icon-svg";
+export { default as UsdcIconSvg } from "./usdc-icon-svg";

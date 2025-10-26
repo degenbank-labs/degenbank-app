@@ -88,46 +88,30 @@ export const useTokenBalance = () => {
     try {
       const userPublicKey = new PublicKey(walletAddress);
       
-      // For fkSOL (development), we need to get the token account balance
-      if (TOKEN_SYMBOL === 'fkSOL') {
-        try {
-          // First, let's check if the mint exists
-          const mintInfo = await connection.getAccountInfo(TOKEN_MINT);
-          
-          const tokenAccount = await getAssociatedTokenAddress(
-            TOKEN_MINT,
-            userPublicKey
-          );
-          
-          // Check if token account exists
-          const tokenAccountInfo = await connection.getAccountInfo(tokenAccount);
-          
-          if (!tokenAccountInfo) {
-            setBalance(0);
-          } else {
-            const accountInfo = await getAccount(connection, tokenAccount);
-            
-            // fkSOL has 9 decimals
-            const tokenBalance = Number(accountInfo.amount) / Math.pow(10, 9);
-            setBalance(tokenBalance);
-          }
-        } catch (accountError) {
-          // Token account doesn't exist, balance is 0
+      // Get USDC token account balance
+      try {
+        const tokenAccount = await getAssociatedTokenAddress(
+          TOKEN_MINT,
+          userPublicKey
+        );
+        
+        // Check if token account exists
+        const tokenAccountInfo = await connection.getAccountInfo(tokenAccount);
+        
+        if (!tokenAccountInfo) {
           setBalance(0);
+        } else {
+          const accountInfo = await getAccount(connection, tokenAccount);
+          
+          // USDC has 6 decimals
+          const tokenBalance = Number(accountInfo.amount) / Math.pow(10, 6);
+          setBalance(tokenBalance);
         }
-      } else {
-        // For native SOL, get the wallet's SOL balance
-        try {
-          const solBalance = await connection.getBalance(userPublicKey);
-          const balance = solBalance / Math.pow(10, 9); // Convert lamports to SOL
-          setBalance(balance);
-        } catch (solError) {
-          console.error('Error fetching SOL balance:', solError);
-          setBalance(0);
-        }
+      } catch (accountError) {
+        // Token account doesn't exist, balance is 0
+        setBalance(0);
       }
     } catch (err) {
-      console.error('Error fetching token balance:', err);
       setError('Failed to fetch balance');
       setBalance(0);
     } finally {

@@ -1,23 +1,15 @@
-import { useState, useEffect } from 'react';
-import { apiService } from '@/lib/api';
-import { Battle } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { apiService } from "@/lib/api";
+import { Battle } from "@/lib/api";
 
-// Extended interface for frontend display
-interface BattleWithMetrics extends Battle {
-  // Frontend-specific fields
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  phase: string;
-  timeRemaining: string;
-  totalTVL: number;
-  activeVaults: number;
-  participants: number;
-  prizePool: number;
-  description: string;
-  color: string;
-  cubePosition: { row: number; col: number };
+// Extended interface for frontend display - using backend data with computed fields
+export interface BattleWithMetrics extends Battle {
+  // Computed frontend-specific fields only
+  timeRemaining: string; // computed from battle_end
+  totalTVL: number; // computed from vaults data
+  activeVaults: number; // computed from vaults data
+  participants: number; // computed from vaults data
+  cubePosition: { row: number; col: number }; // for UI positioning
 }
 
 interface BattleStats {
@@ -38,6 +30,20 @@ export function useBattles() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const calculateTimeRemaining = (endDate: string): string => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = end.getTime() - now.getTime();
+    
+    if (diff <= 0) return "Ended";
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${days}d ${hours}h ${minutes}m`;
+  };
+
   const fetchBattles = async () => {
     try {
       setLoading(true);
@@ -45,79 +51,81 @@ export function useBattles() {
 
       // Fetch battles from API
       const response = await apiService.getAllBattles(0, 100);
-      
+
       if (response.results) {
         // Transform API data to match frontend interface
-        const transformedBattles: BattleWithMetrics[] = response.results.map((battle: Battle, index: number) => ({
-          ...battle,
-          // Map API fields to frontend fields
-          id: (battle.battle_id || battle.battleId || index + 1).toString(),
-          name: battle.battle_name || battle.battleName || `Battle Arena #${index + 1}`,
-          type: 'Mixed Strategy', // Not in API yet
-          status: 'Ongoing Battle', // Not in API yet
-          phase: 'Battle Phase', // Not in API yet
-          // Mock time remaining calculation
-          timeRemaining: `${Math.floor(Math.random() * 15 + 1)}d ${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-          // Mock additional fields since they're not in the API yet
-          totalTVL: Math.floor(Math.random() * 500000 + 100000),
-          activeVaults: Math.floor(Math.random() * 8 + 2),
-          participants: Math.floor(Math.random() * 150 + 20),
-          prizePool: Math.floor(Math.random() * 75000 + 15000),
-          description: battle.battle_description || battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
-          color: ['#6fb7a5', '#FB605C', '#FFB800', '#9333EA'][index % 4],
-          cubePosition: { 
-            row: Math.floor(index / 2), 
-            col: index % 2 
-          },
-        }));
+        const transformedBattles: BattleWithMetrics[] = response.results.map(
+          (battle: Battle, index: number) => ({
+            ...battle,
+            // Only add computed frontend fields
+            timeRemaining: calculateTimeRemaining(battle.battle_end),
+            // Calculate from vaults data or use defaults if no vaults
+            totalTVL: battle.vaults?.reduce((sum, vault) => sum + (vault.total_value_locked || 0), 0) || 0,
+            activeVaults: battle.vaults?.length || 0,
+            participants: battle.vaults?.reduce((sum, vault) => sum + (vault.participants_count || 0), 0) || 0,
+            cubePosition: {
+              row: Math.floor(index / 2),
+              col: index % 2,
+            },
+          })
+        );
 
         setBattles(transformedBattles);
 
-        // Calculate stats
-        const battleStats: BattleStats = {
-          totalActiveBattles: transformedBattles.filter(b => b.status === 'Ongoing Battle').length,
-          totalPrizePool: transformedBattles.reduce((sum, b) => sum + b.prizePool, 0),
-          totalParticipants: transformedBattles.reduce((sum, b) => sum + b.participants, 0),
-          totalTVL: transformedBattles.reduce((sum, b) => sum + b.totalTVL, 0),
-        };
+        // Calculate stats from real data
+        const totalActiveBattles = transformedBattles.filter(
+          (b) => b.battle_status === "active"
+        ).length;
+        const totalPrizePool = transformedBattles.reduce(
+          (sum, b) => sum + b.prize_pool,
+          0
+        );
+        const totalParticipants = transformedBattles.reduce(
+          (sum, b) => sum + b.participants,
+          0
+        );
+        const totalTVL = transformedBattles.reduce(
+          (sum, b) => sum + b.totalTVL,
+          0
+        );
 
-        setStats(battleStats);
+        setStats({
+          totalActiveBattles,
+          totalPrizePool,
+          totalParticipants,
+          totalTVL,
+        });
       }
     } catch (err) {
-      console.error('Error fetching battles:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch battles');
+      console.error("Error fetching battles:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch battles");
     } finally {
       setLoading(false);
     }
   };
 
-  const getBattleById = async (battleId: string): Promise<BattleWithMetrics | null> => {
+  const getBattleById = async (
+    battleId: string
+  ): Promise<BattleWithMetrics | null> => {
     try {
       const battle = await apiService.getBattle(battleId);
-      
+
       if (battle) {
         return {
           ...battle,
-          // Map API fields to frontend fields
-          id: (battle.battle_id || battle.battleId || '1').toString(),
-          name: battle.battle_name || battle.battleName || `Battle Arena`,
-          type: 'Mixed Strategy', // Not in API yet
-          status: 'Ongoing Battle', // Not in API yet
-          phase: 'Battle Phase', // Not in API yet
-          timeRemaining: `${Math.floor(Math.random() * 15 + 1)}d ${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m`,
-          totalTVL: Math.floor(Math.random() * 500000 + 100000),
-          activeVaults: Math.floor(Math.random() * 8 + 2),
-          participants: Math.floor(Math.random() * 150 + 20),
-          prizePool: Math.floor(Math.random() * 75000 + 15000),
-          description: battle.battle_description || battle.battleDescription || 'Vault managers compete for the highest returns in this arena',
-          color: '#6fb7a5',
+          // Only add computed frontend fields
+          timeRemaining: calculateTimeRemaining(battle.battle_end),
+          // Calculate from vaults data or use defaults if no vaults
+          totalTVL: battle.vaults?.reduce((sum, vault) => sum + (vault.total_value_locked || 0), 0) || 0,
+          activeVaults: battle.vaults?.length || 0,
+          participants: battle.vaults?.reduce((sum, vault) => sum + (vault.participants_count || 0), 0) || 0,
           cubePosition: { row: 0, col: 0 },
         };
       }
-      
+
       return null;
     } catch (err) {
-      console.error('Error fetching battle:', err);
+      console.error("Error fetching battle:", err);
       throw err;
     }
   };

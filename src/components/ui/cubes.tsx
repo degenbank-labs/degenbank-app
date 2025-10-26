@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import SolanaIcon from "@/components/svg/solana-icon-svg";
+import { BattleWithMetrics } from "@/hooks/useBattles";
 
 interface Gap {
   row: number;
@@ -11,21 +12,8 @@ interface Duration {
   leave: number;
 }
 
-interface ArenaData {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  phase: string;
-  timeRemaining: string;
-  totalTVL: number;
-  activeVaults: number;
-  participants: number;
-  prizePool: number;
-  description: string;
-  color: string;
-  cubePosition: { row: number; col: number };
-}
+// Use BattleWithMetrics as ArenaData for consistency
+type ArenaData = BattleWithMetrics;
 
 export interface CubesProps {
   gridSize?: number;
@@ -306,6 +294,51 @@ const Cubes: React.FC<CubesProps> = ({
     );
   };
 
+  // Generate positions only for arenas that have data
+  const getArenaPositions = (): Array<{ row: number; col: number; arena: ArenaData }> => {
+    return arenaData.map((arena, index) => {
+      // Calculate centered position based on index and gridSize
+      const totalCubes = arenaData.length;
+      const actualGridSize = Math.ceil(Math.sqrt(totalCubes));
+      
+      // For better centering, especially with fewer cubes
+      let row: number, col: number;
+      
+      if (totalCubes === 1) {
+        // Single cube in center
+        row = Math.floor(gridSize / 2);
+        col = Math.floor(gridSize / 2);
+      } else if (totalCubes <= 4) {
+        // 2x2 grid centered
+        const positions = [
+          { row: Math.floor(gridSize / 2) - 1, col: Math.floor(gridSize / 2) - 1 },
+          { row: Math.floor(gridSize / 2) - 1, col: Math.floor(gridSize / 2) },
+          { row: Math.floor(gridSize / 2), col: Math.floor(gridSize / 2) - 1 },
+          { row: Math.floor(gridSize / 2), col: Math.floor(gridSize / 2) }
+        ];
+        const pos = positions[index] || positions[0];
+        row = pos.row;
+        col = pos.col;
+      } else {
+        // Use arena's cubePosition if available, otherwise calculate based on index
+        if (arena.cubePosition?.row !== undefined && arena.cubePosition?.col !== undefined) {
+          row = arena.cubePosition.row;
+          col = arena.cubePosition.col;
+        } else {
+          // Calculate position with better centering
+          const startRow = Math.floor((gridSize - actualGridSize) / 2);
+          const startCol = Math.floor((gridSize - actualGridSize) / 2);
+          row = startRow + Math.floor(index / actualGridSize);
+          col = startCol + (index % actualGridSize);
+        }
+      }
+      
+      return { row, col, arena };
+    });
+  };
+
+  const arenaPositions = getArenaPositions();
+
   const sceneStyle: React.CSSProperties = {
     gridTemplateColumns: cubeSize
       ? `repeat(${gridSize}, ${cubeSize}px)`
@@ -338,155 +371,174 @@ const Cubes: React.FC<CubesProps> = ({
       style={wrapperStyle}
     >
       <div ref={sceneRef} className="grid" style={sceneStyle}>
-        {cells.map((_, r) =>
-          cells.map((__, c) => {
-            const arena = getArenaForPosition(r, c);
-            const isClickable = !!arena;
-            const cubeKey = `${r}-${c}`;
-            const isHovered = hoveredCube === cubeKey;
+        {arenaPositions.map(({ row, col, arena }) => {
+          const isClickable = !!arena;
+          const cubeKey = `${row}-${col}`;
+          const isHovered = hoveredCube === cubeKey;
 
-            return (
+          return (
+            <div
+              key={cubeKey}
+              className="relative aspect-square h-full w-full"
+              data-row={row}
+              data-col={col}
+              style={{
+                gridColumn: col + 1,
+                gridRow: row + 1,
+              }}
+            >
+              {/* Cube with 3D transformation */}
               <div
-                key={cubeKey}
-                className="relative aspect-square h-full w-full"
-                data-row={r}
-                data-col={c}
+                className={`cube relative aspect-square h-full w-full [transform-style:preserve-3d] ${
+                  isClickable ? "cursor-pointer" : ""
+                } transition-all duration-300`}
+                data-row={row}
+                data-col={col}
+                onClick={() => {
+                  if (arena && onCubeClick) {
+                    onCubeClick(arena, row, col);
+                  }
+                }}
+                onMouseEnter={() => {
+                  if (arena) {
+                    setHoveredCube(cubeKey);
+                  }
+                  if (onCubeHover) {
+                    onCubeHover(arena, row, col);
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredCube(null);
+                  if (onCubeHover) {
+                    onCubeHover(null, row, col);
+                  }
+                }}
               >
-                {/* Floating Enter Arena Text - Outside cube transformation */}
+                <span className="pointer-events-none absolute -inset-9" />
+
+                {/* Floating Enter Arena Text - Above cube */}
                 {arena && (
                   <div
-                    className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center transition-all duration-300 ${
+                    className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-all duration-300 ${
                       isHovered ? "scale-100 opacity-100" : "scale-75 opacity-0"
                     }`}
+                    style={{
+                      transform: "translateZ(50px)", // Position above the cube
+                      transformStyle: "preserve-3d",
+                    }}
                   >
-                    <span className="drop-shadow-4xl text-lg font-bold text-white">
+                    <span className="drop-shadow-4xl text-lg font-bold text-white bg-black/50 px-3 py-1 rounded">
                       Enter Arena
                     </span>
                   </div>
                 )}
 
-                {/* Cube with 3D transformation */}
-                <div
-                  className={`cube relative aspect-square h-full w-full [transform-style:preserve-3d] ${
-                    isClickable ? "cursor-pointer" : ""
-                  } transition-all duration-300`}
-                  data-row={r}
-                  data-col={c}
-                  onClick={() => {
-                    if (arena && onCubeClick) {
-                      onCubeClick(arena, r, c);
-                    }
-                  }}
-                  onMouseEnter={() => {
-                    if (arena) {
-                      setHoveredCube(cubeKey);
-                    }
-                    if (onCubeHover) {
-                      onCubeHover(arena, r, c);
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    setHoveredCube(null);
-                    if (onCubeHover) {
-                      onCubeHover(null, r, c);
-                    }
-                  }}
-                >
-                  <span className="pointer-events-none absolute -inset-9" />
-
-                  {/* Solana Icon - Inside 3D cube space */}
-                  {arena && (
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
-                        isHovered
-                          ? "scale-90 opacity-60"
-                          : "scale-100 opacity-100"
-                      }`}
-                      style={{
-                        transform: "translateZ(25px)", // Position icon inside the cube
-                        transformStyle: "preserve-3d",
-                      }}
-                    >
+                {/* Battle Image - Inside 3D cube space */}
+                {arena && (
+                  <div
+                    className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+                      isHovered
+                        ? "scale-90 opacity-60"
+                        : "scale-100 opacity-100"
+                    }`}
+                    style={{
+                      transform: "translateZ(25px)", // Position icon inside the cube
+                      transformStyle: "preserve-3d",
+                    }}
+                  >
+                    {arena.battle_image ? (
+                      <img 
+                        src={arena.battle_image} 
+                        alt={arena.battle_name || "Battle"} 
+                        width={48} 
+                        height={48}
+                        className="object-contain"
+                      />
+                    ) : (
                       <SolanaIcon width={48} height={48} />
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
 
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform: "translateY(-50%) rotateX(90deg)",
-                    }}
-                  />
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform: "translateY(50%) rotateX(-90deg)",
-                    }}
-                  />
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform: "translateX(-50%) rotateY(-90deg)",
-                    }}
-                  />
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform: "translateX(50%) rotateY(90deg)",
-                    }}
-                  />
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform:
-                        "rotateY(-90deg) translateX(50%) rotateY(90deg)",
-                    }}
-                  />
-                  {/* Front face */}
-                  <div
-                    className="cube-face absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: arena
-                        ? "rgba(111, 183, 165, 0.1)"
-                        : faceColor,
-                      border: arena
-                        ? `2px solid #6fb7a5`
-                        : "var(--cube-face-border)", // Use primary color
-                      boxShadow: "var(--cube-face-shadow)",
-                      transform:
-                        "rotateY(90deg) translateX(-50%) rotateY(-90deg)",
-                    }}
-                  />
-                </div>
+                {/* Top face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform: "translateY(-50%) rotateX(90deg)",
+                  }}
+                />
+                {/* Bottom face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform: "translateY(50%) rotateX(-90deg)",
+                  }}
+                />
+                {/* Left face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform: "translateX(-50%) rotateY(-90deg)",
+                  }}
+                />
+                {/* Right face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform: "translateX(50%) rotateY(90deg)",
+                  }}
+                />
+                {/* Back face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform: "rotateY(-90deg) translateX(50%) rotateY(90deg)",
+                  }}
+                />
+                {/* Front face */}
+                <div
+                  className="cube-face absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: arena
+                      ? "rgba(111, 183, 165, 0.1)"
+                      : faceColor,
+                    border: arena
+                      ? `2px solid #6fb7a5`
+                      : "var(--cube-face-border)", // Use primary color
+                    boxShadow: "var(--cube-face-shadow)",
+                    transform:
+                      "rotateY(90deg) translateX(-50%) rotateY(-90deg)",
+                  }}
+                />
               </div>
-            );
-          })
-        )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
