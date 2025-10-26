@@ -10,27 +10,29 @@ import {
 // Solana configuration
 const getNetworkConfig = () => {
   const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
-  
+
   if (network === "devnet") {
     // Devnet uses USDC
     return {
       rpcUrl: "https://api.devnet.solana.com",
-      tokenMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"), // USDC Devnet
-      tokenSymbol: "USDC"
+      tokenMint: new PublicKey("USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT"), // USDC Devnet
+      tokenSymbol: "USDC",
     };
   } else if (network === "mainnet") {
     // Mainnet uses USDC
     return {
-      rpcUrl: process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com",
+      rpcUrl:
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
+        "https://api.mainnet-beta.solana.com",
       tokenMint: new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"), // USDC Mainnet
-      tokenSymbol: "USDC"
+      tokenSymbol: "USDC",
     };
   } else {
     // Default to devnet config
     return {
       rpcUrl: "https://api.devnet.solana.com",
-      tokenMint: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"), // USDC Devnet
-      tokenSymbol: "USDC"
+      tokenMint: new PublicKey("USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT"), // USDC Devnet
+      tokenSymbol: "USDC",
     };
   }
 };
