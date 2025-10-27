@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 // New API Response structure
 export interface ApiResponse<T = unknown> {
@@ -117,12 +118,16 @@ export interface Battle {
   treasury_address: string;
   owner_address: string;
   pda_address: string;
-  arena_type: 'DCA Strategy' | 'Lending Strategy' | 'Mixed Strategy' | 'Yield Farming';
-  current_phase: 'stake_phase' | 'battle_phase' | 'completed';
+  arena_type:
+    | "DCA Strategy"
+    | "Lending Strategy"
+    | "Mixed Strategy"
+    | "Yield Farming";
+  current_phase: "stake_phase" | "battle_phase" | "completed";
   prize_pool: number; // bigint from backend converted to number
   winner_vault_id: string | null;
   arena_color: string | null;
-  status: 'open_deposit' | 'ongoing_battle' | 'completed';
+  status: "open_deposit" | "ongoing_battle" | "completed";
   vaults?: Vault[];
 }
 
@@ -168,21 +173,27 @@ export interface UserVaultPosition {
   position_id: string;
   user_id: string;
   vault_id: string;
-  vault_shares: number;
-  cumulative_deposits: number;
-  cumulative_withdrawals: number;
-  current_value: number;
-  high_water_mark: number;
-  fees_paid: number;
-  max_daily_drawdown: number;
-  total_return_percentage: number;
+  vault_shares: string;
+  cumulative_deposits: string;
+  cumulative_withdrawals: string;
+  current_value: string;
+  high_water_mark: string;
+  fees_paid: string;
+  max_daily_drawdown: string;
+  total_return_percentage: string;
   first_deposit_at: string;
   last_transaction_at: string;
   created_at: string;
   updated_at: string;
-  user?: User;
-  vault?: Vault;
+  vault?: {
+    vault_id: string;
+    vault_name: string;
+    vault_address: string;
+    vault_strategy: string;
+  };
 }
+
+
 
 // Deposit request interface
 export interface DepositRequest {
@@ -203,35 +214,29 @@ class ApiService {
     token?: string
   ): Promise<ApiResponse<T>> {
     const url = `${API_BASE_URL}${endpoint}`;
-    
+
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'accept': 'application/json',
-      ...options.headers as Record<string, string>,
+      "Content-Type": "application/json",
+      accept: "application/json",
+      ...(options.headers as Record<string, string>),
     };
 
     // Add Authorization header if token is provided
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
-    
+
     const config: RequestInit = {
       headers,
       ...options,
     };
 
-    console.log(`📡 Making API request to ${endpoint}:`, {
-      method: config.method || 'GET',
-      hasAuthHeader: !!headers['Authorization'],
-      headers: Object.keys(headers)
-    });
-
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
-        
+
         try {
           const errorData = await response.json();
           if (errorData.message) {
@@ -241,41 +246,49 @@ class ApiService {
           // If response is not JSON, use default error message
           errorMessage = `${errorMessage} - ${response.statusText}`;
         }
-        
+
         // Handle specific status codes
         if (response.status === 500) {
-          console.warn('Server error (500) - this might be a temporary issue');
+          console.warn("Server error (500) - this might be a temporary issue");
         } else if (response.status === 409) {
-          console.info('Conflict (409) - resource might already exist');
+          console.info("Conflict (409) - resource might already exist");
         }
-        
+
         throw new Error(errorMessage);
       }
-      
+
       const data = await response.json();
       return data as ApiResponse<T>;
     } catch (error) {
-      console.error('API request failed:', {
+      console.error("API request failed:", {
         url,
-        method: config.method || 'GET',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        method: config.method || "GET",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
       throw error;
     }
   }
 
   // Create a new user with retry logic
-  async createUser(userData: CreateUserRequest, token?: string, retryCount = 0): Promise<User> {
+  async createUser(
+    userData: CreateUserRequest,
+    token?: string,
+    retryCount = 0
+  ): Promise<User> {
     const maxRetries = 2;
-    
+
     try {
-      const response = await this.request<BackendUser>('/users', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      }, token);
-      
+      const response = await this.request<BackendUser>(
+        "/users",
+        {
+          method: "POST",
+          body: JSON.stringify(userData),
+        },
+        token
+      );
+
       const backendUser = response.data;
-      
+
       // Map backend response fields to frontend interface
       const user: User = {
         userId: backendUser.user_id,
@@ -284,26 +297,31 @@ class ApiService {
         walletAddress: backendUser.wallet_address,
         email: backendUser.email,
         image: backendUser.image,
-        joinDate: backendUser.join_date
+        joinDate: backendUser.join_date,
       };
-      
+
       return user;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+
       // Retry on 500 errors (server errors) but not on client errors (4xx)
-      if (retryCount < maxRetries && errorMessage.includes('status: 500')) {
-        console.log(`Retrying createUser request (attempt ${retryCount + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+      if (retryCount < maxRetries && errorMessage.includes("status: 500")) {
+        console.log(
+          `Retrying createUser request (attempt ${retryCount + 1}/${maxRetries})`
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (retryCount + 1))
+        ); // Exponential backoff
         return this.createUser(userData, token, retryCount + 1);
       }
-      
+
       // If it's a 409 (conflict), the user might already exist - this is not necessarily an error
-      if (errorMessage.includes('status: 409')) {
-        console.info('User might already exist (409 conflict)');
-        throw new Error('User already exists');
+      if (errorMessage.includes("status: 409")) {
+        console.info("User might already exist (409 conflict)");
+        throw new Error("User already exists");
       }
-      
+
       throw error;
     }
   }
@@ -311,9 +329,11 @@ class ApiService {
   // Get user by wallet address
   async getUser(walletAddress: string): Promise<User | null> {
     try {
-      const response = await this.request<BackendUser>(`/users/wallet/${walletAddress}`);
+      const response = await this.request<BackendUser>(
+        `/users/wallet/${walletAddress}`
+      );
       const backendUser = response.data;
-      
+
       // Map backend response fields to frontend interface
       const user: User = {
         userId: backendUser.user_id,
@@ -322,13 +342,13 @@ class ApiService {
         walletAddress: backendUser.wallet_address,
         email: backendUser.email,
         image: backendUser.image,
-        joinDate: backendUser.join_date
+        joinDate: backendUser.join_date,
       };
-      
+
       return user;
     } catch (error) {
       // If user not found (404), return null instead of throwing error
-      if (error instanceof Error && error.message.includes('status: 404')) {
+      if (error instanceof Error && error.message.includes("status: 404")) {
         return null;
       }
       // Re-throw other errors
@@ -338,7 +358,7 @@ class ApiService {
 
   // Get all users
   async getAllUsers(): Promise<GetUsersResponse> {
-    const response = await this.request<GetUsersResponse>('/users');
+    const response = await this.request<GetUsersResponse>("/users");
     return response.data;
   }
 
@@ -348,8 +368,13 @@ class ApiService {
     return response.data;
   }
 
-  async getAllVaults(skip: number = 0, limit: number = 10): Promise<GetVaultsResponse> {
-    const response = await this.request<GetVaultsResponse>(`/vault?skip=${skip}&limit=${limit}`);
+  async getAllVaults(
+    skip: number = 0,
+    limit: number = 10
+  ): Promise<GetVaultsResponse> {
+    const response = await this.request<GetVaultsResponse>(
+      `/vault?skip=${skip}&limit=${limit}`
+    );
     return response.data;
   }
 
@@ -358,14 +383,19 @@ class ApiService {
     return response.data;
   }
 
-  async getVaultPerformance(vaultId: string, period: string = '14D'): Promise<VaultPerformanceResponse> {
-    const response = await this.request<VaultPerformanceResponse>(`/vault/${vaultId}/performance?period=${period}`);
+  async getVaultPerformance(
+    vaultId: string,
+    period: string = "14D"
+  ): Promise<VaultPerformanceResponse> {
+    const response = await this.request<VaultPerformanceResponse>(
+      `/vault/${vaultId}/performance?period=${period}`
+    );
     return response.data;
   }
 
   async disqualifyVault(vaultId: string): Promise<Vault> {
     const response = await this.request<Vault>(`/vault/${vaultId}/disqualify`, {
-      method: 'POST',
+      method: "POST",
     });
     return response.data;
   }
@@ -376,8 +406,13 @@ class ApiService {
     return response.data;
   }
 
-  async getAllBattles(skip: number = 0, limit: number = 10): Promise<GetBattlesResponse> {
-    const response = await this.request<GetBattlesResponse>(`/battle?skip=${skip}&limit=${limit}`);
+  async getAllBattles(
+    skip: number = 0,
+    limit: number = 10
+  ): Promise<GetBattlesResponse> {
+    const response = await this.request<GetBattlesResponse>(
+      `/battle?skip=${skip}&limit=${limit}`
+    );
     return response.data;
   }
 
@@ -387,8 +422,13 @@ class ApiService {
     return response.data;
   }
 
-  async getAllManagers(skip: number = 0, limit: number = 10): Promise<GetManagersResponse> {
-    const response = await this.request<GetManagersResponse>(`/manager?skip=${skip}&limit=${limit}`);
+  async getAllManagers(
+    skip: number = 0,
+    limit: number = 10
+  ): Promise<GetManagersResponse> {
+    const response = await this.request<GetManagersResponse>(
+      `/manager?skip=${skip}&limit=${limit}`
+    );
     return response.data;
   }
 
@@ -403,32 +443,65 @@ class ApiService {
     return response.data;
   }
 
-  async getTokensByNetwork(network: string, skip: number = 0, limit: number = 10): Promise<Token[]> {
-    const response = await this.request<Token[]>(`/token/network/${network}?skip=${skip}&limit=${limit}`);
+  async getTokensByNetwork(
+    network: string,
+    skip: number = 0,
+    limit: number = 10
+  ): Promise<Token[]> {
+    const response = await this.request<Token[]>(
+      `/token/network/${network}?skip=${skip}&limit=${limit}`
+    );
     return response.data;
   }
 
   // User Vault Position API methods
-  async getUserVaultPosition(userId: string, vaultId: string, token?: string): Promise<UserVaultPosition | null> {
-    const response = await this.request<UserVaultPosition | null>(`/user-vault-position/user/${userId}/vault/${vaultId}`, {}, token);
+  async getUserVaultPosition(
+    userId: string,
+    vaultId: string,
+    token?: string
+  ): Promise<UserVaultPosition | null> {
+    const response = await this.request<UserVaultPosition | null>(
+      `/user-vault-position/user/${userId}/vault/${vaultId}`,
+      {},
+      token
+    );
     return response.data;
   }
 
-  async getUserVaultPositions(userId: string, token?: string): Promise<UserVaultPosition[]> {
-    const response = await this.request<UserVaultPosition[]>(`/user-vault-position/user/${userId}`, {}, token);
+  async getUserVaultPositions(
+    userId: string,
+    token?: string
+  ): Promise<UserVaultPosition[]> {
+    const response = await this.request<UserVaultPosition[]>(
+      `/user-vault-position/user/${userId}`,
+      {},
+      token
+    );
     return response.data;
   }
 
-  async getVaultPositions(vaultId: string, token?: string): Promise<UserVaultPosition[]> {
-    const response = await this.request<UserVaultPosition[]>(`/user-vault-position/vault/${vaultId}`, {}, token);
+  async getVaultPositions(
+    vaultId: string,
+    token?: string
+  ): Promise<UserVaultPosition[]> {
+    const response = await this.request<UserVaultPosition[]>(
+      `/user-vault-position/vault/${vaultId}`,
+      {},
+      token
+    );
     return response.data;
   }
 
-  async recordDeposit(userId: string, vaultId: string, depositData: DepositRequest, token?: string): Promise<UserVaultPosition> {
+  async recordDeposit(
+    userId: string,
+    vaultId: string,
+    depositData: DepositRequest,
+    token?: string
+  ): Promise<UserVaultPosition> {
     const response = await this.request<UserVaultPosition>(
       `/user-vault-position/user/${userId}/vault/${vaultId}/deposit`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(depositData),
       },
       token
@@ -436,11 +509,16 @@ class ApiService {
     return response.data;
   }
 
-  async recordWithdrawal(userId: string, vaultId: string, withdrawalData: WithdrawalRequest, token?: string): Promise<UserVaultPosition> {
+  async recordWithdrawal(
+    userId: string,
+    vaultId: string,
+    withdrawalData: WithdrawalRequest,
+    token?: string
+  ): Promise<UserVaultPosition> {
     const response = await this.request<UserVaultPosition>(
       `/user-vault-position/user/${userId}/vault/${vaultId}/withdrawal`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(withdrawalData),
       },
       token
@@ -449,21 +527,21 @@ class ApiService {
   }
 
   async updatePositionPerformance(
-    userId: string, 
-    vaultId: string, 
+    userId: string,
+    vaultId: string,
     performanceData: {
       current_value?: number;
       high_water_mark?: number;
       max_daily_drawdown?: number;
       total_return_percentage?: number;
       fees_paid?: number;
-    }, 
+    },
     token?: string
   ): Promise<UserVaultPosition> {
     const response = await this.request<UserVaultPosition>(
       `/user-vault-position/user/${userId}/vault/${vaultId}/performance`,
       {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(performanceData),
       },
       token

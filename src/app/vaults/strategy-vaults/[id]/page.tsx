@@ -20,7 +20,7 @@ import {
 import { useVaultOperations } from "@/hooks/useVaultOperations";
 import { useAuth } from "@/hooks/useAuth";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
-import { apiService, Manager, Battle } from "@/lib/api";
+import { apiService, Manager, Battle, UserVaultPosition } from "@/lib/api";
 import {
   ComposedChart,
   Area,
@@ -90,9 +90,13 @@ export default function VaultDetailPage() {
   const [managerLoading, setManagerLoading] = useState(false);
   const [battleData, setBattleData] = useState<Battle | null>(null);
   const [battleLoading, setBattleLoading] = useState(false);
+  const [userVaultPosition, setUserVaultPosition] =
+    useState<UserVaultPosition | null>(null);
+  const [userVaultPositionLoading, setUserVaultPositionLoading] =
+    useState(false);
 
   // Auth and vault operations
-  const { authenticated, login } = useAuth();
+  const { authenticated, login, user } = useAuth();
   const {
     deposit,
     withdraw,
@@ -260,6 +264,29 @@ export default function VaultDetailPage() {
       refetchPerformance(selectedPeriod);
     }
   }, [selectedPeriod, vaultId, refetchPerformance]);
+
+  // Fetch user vault position when user and vault data are available
+  useEffect(() => {
+    const fetchUserVaultPosition = async () => {
+      if (authenticated && user?.userId && vaultId) {
+        setUserVaultPositionLoading(true);
+        try {
+          const positions = await apiService.getUserVaultPositions(user.userId);
+
+          // Find the position for the current vault
+          const currentVaultPosition = positions.find(
+            (position) => position.vault_id === vaultId
+          );
+          setUserVaultPosition(currentVaultPosition || null);
+        } catch (err) {
+          setUserVaultPosition(null);
+        } finally {
+          setUserVaultPositionLoading(false);
+        }
+      }
+    };
+    fetchUserVaultPosition();
+  }, [authenticated, user?.userId, vaultId]);
 
   // Handle deposit
   const handleDeposit = async () => {
@@ -1084,7 +1111,21 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <UsdcIconSvg width={16} height={16} />
-                      <span className="font-medium text-white">0</span>
+                      <span className="font-medium text-white">
+                        {userVaultPositionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : userVaultPosition ? (
+                          formatUSDC(
+                            parseFloat(userVaultPosition.cumulative_deposits) -
+                              parseFloat(
+                                userVaultPosition.cumulative_withdrawals
+                              ),
+                            { showSymbol: false }
+                          )
+                        ) : (
+                          "0"
+                        )}
+                      </span>
                     </div>
                   </div>
 
@@ -1095,7 +1136,15 @@ export default function VaultDetailPage() {
                       </span>
                     </Tooltip>
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-white">0%</span>
+                      <span className="font-medium text-white">
+                        {userVaultPositionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : userVaultPosition ? (
+                          parseFloat(userVaultPosition.vault_shares).toFixed(2)
+                        ) : (
+                          "0"
+                        )}
+                      </span>
                     </div>
                   </div>
 
@@ -1105,8 +1154,40 @@ export default function VaultDetailPage() {
                         Max Daily Drawdown
                       </span>
                     </Tooltip>
-                    {/* TODO: Integrate with user max daily drawdown API */}
-                    <span className="font-medium text-white">0.00%</span>
+                    <span className="font-medium text-white">
+                      {userVaultPositionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : userVaultPosition ? (
+                        `${parseFloat(userVaultPosition.max_daily_drawdown).toFixed(2)}%`
+                      ) : (
+                        "0.00%"
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Tooltip content="The current value of your position in the vault">
+                      <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
+                        Current Value
+                      </span>
+                    </Tooltip>
+                    <div className="flex items-center gap-2">
+                      <UsdcIconSvg width={16} height={16} />
+                      <span className="font-medium text-white">
+                        {userVaultPositionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : userVaultPosition ? (
+                          formatUSDC(
+                            parseFloat(userVaultPosition.current_value),
+                            {
+                              showSymbol: false,
+                            }
+                          )
+                        ) : (
+                          "0"
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1120,8 +1201,17 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <UsdcIconSvg width={16} height={16} />
-                      {/* TODO: Integrate with user fees paid API */}
-                      <span className="font-medium text-white">0</span>
+                      <span className="font-medium text-white">
+                        {userVaultPositionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : userVaultPosition ? (
+                          formatUSDC(parseFloat(userVaultPosition.fees_paid), {
+                            showSymbol: false,
+                          })
+                        ) : (
+                          "0"
+                        )}
+                      </span>
                     </div>
                   </div>
 
@@ -1133,9 +1223,46 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <UsdcIconSvg width={16} height={16} />
-                      {/* TODO: Integrate with user high-water mark API */}
-                      <span className="font-medium text-white">0</span>
+                      <span className="font-medium text-white">
+                        {userVaultPositionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : userVaultPosition ? (
+                          formatUSDC(
+                            parseFloat(userVaultPosition.high_water_mark),
+                            {
+                              showSymbol: false,
+                            }
+                          )
+                        ) : (
+                          "0"
+                        )}
+                      </span>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Tooltip content="Your total return percentage since first deposit">
+                      <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
+                        Total Return
+                      </span>
+                    </Tooltip>
+                    <span
+                      className={`font-medium ${
+                        userVaultPosition &&
+                        parseFloat(userVaultPosition.total_return_percentage) >=
+                          0
+                          ? "text-profit"
+                          : "text-loss"
+                      }`}
+                    >
+                      {userVaultPositionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : userVaultPosition ? (
+                        `${parseFloat(userVaultPosition.total_return_percentage) >= 0 ? "+" : ""}${parseFloat(userVaultPosition.total_return_percentage).toFixed(2)}%`
+                      ) : (
+                        "0.00%"
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
