@@ -40,14 +40,14 @@ export function Navbar() {
           <div className="flex items-center">
             <Image
               src="/assets/logo/degenbank-logo.png"
-              alt="Degen Bank"
+              alt="Degen Reserve"
               width={180}
               height={56}
               className="h-12 w-auto"
               priority
             />
             <p className="font-cirka ml-2 text-2xl font-bold text-white md:text-4xl">
-              DEGEN BANK
+              DEGEN RESERVE
             </p>
           </div>
 

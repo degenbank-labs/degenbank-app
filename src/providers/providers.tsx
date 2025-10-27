@@ -64,7 +64,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           walletChainType: "solana-only",
           accentColor: "#6366f1",
           logo: undefined,
-          landingHeader: "Welcome to DegenBank",
+          landingHeader: "Welcome to Degen Reserve",
           loginMessage:
             "Connect with Google or your Solana wallet to get started",
           showWalletLoginFirst: true,

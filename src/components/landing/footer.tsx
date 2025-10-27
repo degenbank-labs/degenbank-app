@@ -8,12 +8,12 @@ export function Footer() {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   const handleExternalLink = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -34,8 +34,10 @@ export function Footer() {
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() => handleExternalLink('https://discord.gg/degenbank')}
-                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 hover:bg-transparent hover:text-black transition-colors duration-200"
+                  onClick={() =>
+                    handleExternalLink("https://discord.gg/degenbank")
+                  }
+                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 transition-colors duration-200 hover:bg-transparent hover:text-black"
                 >
                   <MessageCircle size={16} />
                   Discord
@@ -43,11 +45,12 @@ export function Footer() {
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() => handleExternalLink('https://twitter.com/degenbank')}
-                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 hover:bg-transparent hover:text-black transition-colors duration-200"
+                  onClick={() =>
+                    handleExternalLink("https://twitter.com/degenbank")
+                  }
+                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 transition-colors duration-200 hover:bg-transparent hover:text-black"
                 >
-                  <Twitter size={16} />
-                  X / Twitter
+                  <Twitter size={16} />X / Twitter
                 </Button>
               </div>
             </div>
@@ -57,20 +60,20 @@ export function Footer() {
           <div>
             <div className="flex flex-col space-y-3">
               <button
-                onClick={() => scrollToSection('how-it-works')}
-                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+                onClick={() => scrollToSection("how-it-works")}
+                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
               >
                 How It Works
               </button>
               <button
-                onClick={() => scrollToSection('vault')}
-                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+                onClick={() => scrollToSection("vault")}
+                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
               >
                 Vault
               </button>
               <button
-                onClick={() => handleExternalLink('#')}
-                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+                onClick={() => handleExternalLink("#")}
+                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
               >
                 Whitepaper
               </button>
@@ -81,14 +84,14 @@ export function Footer() {
           <div className="space-y-6">
             <div className="flex flex-col space-y-3">
               <a
-                href="mailto:support@degenbank.cc"
+                href="mailto:support@degenreserve.xyz"
                 className="text-base text-black/80 transition-colors hover:text-black"
               >
-                support@degenbank.cc
+                support@degenreserve.xyz
               </a>
               <button
-                onClick={() => handleExternalLink('#')}
-                className="text-left text-base text-black/80 transition-colors hover:text-black cursor-pointer"
+                onClick={() => handleExternalLink("#")}
+                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
               >
                 Privacy Policy
               </button>
@@ -101,14 +104,14 @@ export function Footer() {
           <div className="flex items-center justify-center gap-4">
             <Image
               src="/assets/logo/degenbank-logo.png"
-              alt="Degen Bank"
+              alt="Degen Reserve"
               width={240}
               height={72}
-              className="mt-4 h-20 md:h-28 w-auto brightness-75"
+              className="mt-4 h-20 w-auto brightness-75 md:h-28"
               priority
             />
-            <p className="font-cirka text-6xl md:text-9xl font-bold whitespace-nowrap text-[#5C9487]">
-              Degen Bank
+            <p className="font-cirka text-6xl font-bold whitespace-nowrap text-[#5C9487] md:text-9xl">
+              Degen Reserve
             </p>
           </div>
         </div>
