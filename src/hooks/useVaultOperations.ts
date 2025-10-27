@@ -772,9 +772,18 @@ export const useVaultOperations = () => {
             }
           }
           
-          throw new Error(errorMessage);
+          // Set error state and return early - don't continue to success logic
+          setDepositState({
+            isLoading: false,
+            error: errorMessage,
+            txSignature: null,
+          });
+
+          toast.error(`Deposit failed: ${errorMessage}`);
+          return { success: false, error: errorMessage };
         }
 
+        // Success: set state and show success modal
         setDepositState({
           isLoading: false,
           error: null,

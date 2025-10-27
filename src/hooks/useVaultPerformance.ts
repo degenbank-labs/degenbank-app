@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiService, VaultPerformanceResponse } from '@/lib/api';
 
 export interface PerformanceDataPoint {
@@ -14,7 +14,7 @@ export const useVaultPerformance = (vaultId: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPerformanceData = async (period: '14D' | '30D' = '30D') => {
+  const fetchPerformanceData = useCallback(async (period: '14D' | '30D' = '30D') => {
     if (!vaultId) return;
 
     setLoading(true);
@@ -45,7 +45,7 @@ export const useVaultPerformance = (vaultId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [vaultId]);
 
   // Generate mock data as fallback
   const generateMockData = (period: '14D' | '30D'): PerformanceDataPoint[] => {
@@ -79,7 +79,7 @@ export const useVaultPerformance = (vaultId: string) => {
 
   useEffect(() => {
     fetchPerformanceData();
-  }, [vaultId]);
+  }, [fetchPerformanceData]);
 
   return {
     performanceData,

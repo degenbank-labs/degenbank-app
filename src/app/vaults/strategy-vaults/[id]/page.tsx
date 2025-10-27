@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
 import {
@@ -109,6 +109,87 @@ export default function VaultDetailPage() {
   // Use real performance data
   const { performanceData, refetch: refetchPerformance } =
     useVaultPerformance(vaultId);
+
+  const chartData = useMemo(() => {
+    // Use real performance data only
+    const currentData = performanceData;
+
+    if (!currentData || currentData.length === 0) {
+      return [];
+    }
+
+    switch (selectedChart) {
+      case "roi":
+        return currentData.map((item) => ({
+          ...item,
+          value: item.roi,
+        }));
+      case "vaultBalance":
+        return currentData.map((item) => ({
+          ...item,
+          value: item.vaultBalance,
+        }));
+      default:
+        return currentData.map((item) => ({
+          ...item,
+          value: item.roi,
+        }));
+    }
+  }, [performanceData, selectedChart]);
+
+  const chartConfig = useMemo(() => {
+    const currentData = performanceData;
+
+    if (!currentData || currentData.length === 0) {
+      return {
+        label: "ROI (%)",
+        format: (value: number) => `${value.toFixed(2)}%`,
+        color: "#34CB88",
+        domain: [0, 100],
+      };
+    }
+
+    switch (selectedChart) {
+      case "roi":
+        // Determine if we have negative values in ROI data
+        const hasNegativeROI = currentData.some(
+          (item: PerformanceDataPoint) => item.roi < 0
+        );
+        const maxROI = Math.max(
+          ...currentData.map((item: PerformanceDataPoint) => item.roi)
+        );
+        const minROI = Math.min(
+          ...currentData.map((item: PerformanceDataPoint) => item.roi)
+        );
+
+        return {
+          label: "ROI (%)",
+          format: (value: number) => `${value.toFixed(2)}%`,
+          color: hasNegativeROI
+            ? maxROI >= 0
+              ? "#34CB88"
+              : "#FB605C"
+            : "#34CB88",
+          hasNegativeValues: hasNegativeROI,
+          maxValue: maxROI,
+          minValue: minROI,
+        };
+      case "vaultBalance":
+        return {
+          label: "Vault Balance (M USDC)",
+          format: (value: number) => `${value.toFixed(2)}M USDC`,
+          color: "#8b5cf6",
+          hasNegativeValues: false,
+        };
+      default:
+        return {
+          label: "ROI (%)",
+          format: (value: number) => `${value.toFixed(2)}%`,
+          color: "#34CB88",
+          hasNegativeValues: false,
+        };
+    }
+  }, [performanceData, selectedChart]);
 
   // Handle dynamic back navigation
   const handleBackNavigation = () => {
@@ -368,91 +449,9 @@ export default function VaultDetailPage() {
     );
   }
 
-  // Get chart data based on selected chart type and period
-  const getChartData = () => {
-    // Use real performance data only
-    const currentData = performanceData;
 
-    if (!currentData || currentData.length === 0) {
-      return [];
-    }
 
-    switch (selectedChart) {
-      case "roi":
-        return currentData.map((item) => ({
-          ...item,
-          value: item.roi,
-        }));
-      case "vaultBalance":
-        return currentData.map((item) => ({
-          ...item,
-          value: item.vaultBalance,
-        }));
-      default:
-        return currentData.map((item) => ({
-          ...item,
-          value: item.roi,
-        }));
-    }
-  };
 
-  // Get chart label and format based on selected chart type
-  const getChartConfig = () => {
-    const currentData = performanceData;
-
-    if (!currentData || currentData.length === 0) {
-      return {
-        label: "ROI (%)",
-        format: (value: number) => `${value.toFixed(2)}%`,
-        color: "#34CB88",
-        domain: [0, 100],
-      };
-    }
-
-    switch (selectedChart) {
-      case "roi":
-        // Determine if we have negative values in ROI data
-        const hasNegativeROI = currentData.some(
-          (item: PerformanceDataPoint) => item.roi < 0
-        );
-        const maxROI = Math.max(
-          ...currentData.map((item: PerformanceDataPoint) => item.roi)
-        );
-        const minROI = Math.min(
-          ...currentData.map((item: PerformanceDataPoint) => item.roi)
-        );
-
-        return {
-          label: "ROI (%)",
-          format: (value: number) => `${value.toFixed(2)}%`,
-          color: hasNegativeROI
-            ? maxROI >= 0
-              ? "#34CB88"
-              : "#FB605C"
-            : "#34CB88",
-          hasNegativeValues: hasNegativeROI,
-          maxValue: maxROI,
-          minValue: minROI,
-        };
-      case "vaultBalance":
-        return {
-          label: "Vault Balance (M USDC)",
-          format: (value: number) => `${value.toFixed(2)}M USDC`,
-          color: "#8b5cf6",
-          hasNegativeValues: false,
-        };
-      default:
-        return {
-          label: "ROI (%)",
-          format: (value: number) => `${value.toFixed(2)}%`,
-          color: "#34CB88",
-          hasNegativeValues: false,
-        };
-    }
-  };
-
-  const chartData = getChartData();
-  const chartConfig = getChartConfig();
 
   const formatAPY = (apy: number | null | undefined) => {
     // Convert to number and handle null/undefined/invalid values
