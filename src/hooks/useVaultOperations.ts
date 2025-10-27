@@ -80,7 +80,7 @@ interface SuccessModalState {
 }
 
 export const useVaultOperations = () => {
-  const { authenticated, user: privyUser } = usePrivy();
+  const { authenticated, user: privyUser, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const [depositState, setDepositState] = useState<VaultOperationState>({
     isLoading: false,
@@ -783,7 +783,52 @@ export const useVaultOperations = () => {
           return { success: false, error: errorMessage };
         }
 
-        // Success: set state and show success modal
+        // Success: record deposit in backend and set state
+        try {
+          // Get access token for backend authentication
+          const accessToken = await getAccessToken();
+          if (!accessToken) {
+            console.warn("No access token available for backend sync");
+          }
+
+          // Get user data from backend to get user ID
+          const walletAddress = getUserPublicKey().toString();
+          let userId: string | null = null;
+          
+          try {
+            const userData = await apiService.getUser(walletAddress);
+            userId = userData?.userId?.toString() || null;
+          } catch (error) {
+            console.warn("Failed to get user data for backend sync:", error);
+          }
+
+          // Record deposit in backend if we have user ID
+          if (userId && accessToken) {
+            try {
+              // For now, assume shares_received equals amount (1:1 ratio)
+              // In a real implementation, this should be calculated based on vault's share price
+              const sharesReceived = amount;
+              
+              const depositData = {
+                amount: amount,
+                shares_received: sharesReceived
+              };
+
+              await apiService.recordDeposit(userId, vaultId, depositData, accessToken);
+              console.log("Deposit successfully recorded in backend");
+            } catch (backendError) {
+              console.error("Failed to record deposit in backend:", backendError);
+              // Don't fail the entire operation if backend sync fails
+              // The blockchain transaction was successful
+            }
+          } else {
+            console.warn("Skipping backend deposit recording - missing user ID or access token");
+          }
+        } catch (syncError) {
+          console.error("Error during backend sync:", syncError);
+          // Don't fail the entire operation if backend sync fails
+        }
+
         setDepositState({
           isLoading: false,
           error: null,
@@ -879,6 +924,52 @@ export const useVaultOperations = () => {
 
         // Send transaction
         const signature = await sendTransaction(transaction);
+
+        // Success: record withdrawal in backend and set state
+        try {
+          // Get access token for backend authentication
+          const accessToken = await getAccessToken();
+          if (!accessToken) {
+            console.warn("No access token available for backend sync");
+          }
+
+          // Get user data from backend to get user ID
+          const walletAddress = getUserPublicKey().toString();
+          let userId: string | null = null;
+          
+          try {
+            const userData = await apiService.getUser(walletAddress);
+            userId = userData?.userId?.toString() || null;
+          } catch (error) {
+            console.warn("Failed to get user data for backend sync:", error);
+          }
+
+          // Record withdrawal in backend if we have user ID
+          if (userId && accessToken) {
+            try {
+              // For now, assume shares_burned equals amount (1:1 ratio)
+              // In a real implementation, this should be calculated based on vault's share price
+              const sharesBurned = amount;
+              
+              const withdrawalData = {
+                amount: amount,
+                shares_burned: sharesBurned
+              };
+
+              await apiService.recordWithdrawal(userId, vaultId, withdrawalData, accessToken);
+              console.log("Withdrawal successfully recorded in backend");
+            } catch (backendError) {
+              console.error("Failed to record withdrawal in backend:", backendError);
+              // Don't fail the entire operation if backend sync fails
+              // The blockchain transaction was successful
+            }
+          } else {
+            console.warn("Skipping backend withdrawal recording - missing user ID or access token");
+          }
+        } catch (syncError) {
+          console.error("Error during backend sync:", syncError);
+          // Don't fail the entire operation if backend sync fails
+        }
 
         setWithdrawState({
           isLoading: false,

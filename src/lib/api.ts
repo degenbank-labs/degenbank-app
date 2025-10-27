@@ -153,6 +153,39 @@ export interface GetTokensResponse {
   total: number;
 }
 
+// User Vault Position interfaces
+export interface UserVaultPosition {
+  position_id: string;
+  user_id: string;
+  vault_id: string;
+  vault_shares: number;
+  cumulative_deposits: number;
+  cumulative_withdrawals: number;
+  current_value: number;
+  high_water_mark: number;
+  fees_paid: number;
+  max_daily_drawdown: number;
+  total_return_percentage: number;
+  first_deposit_at: string;
+  last_transaction_at: string;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  vault?: Vault;
+}
+
+// Deposit request interface
+export interface DepositRequest {
+  amount: number;
+  shares_received: number;
+}
+
+// Withdrawal request interface
+export interface WithdrawalRequest {
+  amount: number;
+  shares_burned: number;
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -320,6 +353,69 @@ class ApiService {
 
   async getTokensByNetwork(network: string, skip: number = 0, limit: number = 10): Promise<Token[]> {
     const response = await this.request<Token[]>(`/token/network/${network}?skip=${skip}&limit=${limit}`);
+    return response.data;
+  }
+
+  // User Vault Position API methods
+  async getUserVaultPosition(userId: string, vaultId: string, token?: string): Promise<UserVaultPosition | null> {
+    const response = await this.request<UserVaultPosition | null>(`/user-vault-position/user/${userId}/vault/${vaultId}`, {}, token);
+    return response.data;
+  }
+
+  async getUserVaultPositions(userId: string, token?: string): Promise<UserVaultPosition[]> {
+    const response = await this.request<UserVaultPosition[]>(`/user-vault-position/user/${userId}`, {}, token);
+    return response.data;
+  }
+
+  async getVaultPositions(vaultId: string, token?: string): Promise<UserVaultPosition[]> {
+    const response = await this.request<UserVaultPosition[]>(`/user-vault-position/vault/${vaultId}`, {}, token);
+    return response.data;
+  }
+
+  async recordDeposit(userId: string, vaultId: string, depositData: DepositRequest, token?: string): Promise<UserVaultPosition> {
+    const response = await this.request<UserVaultPosition>(
+      `/user-vault-position/user/${userId}/vault/${vaultId}/deposit`,
+      {
+        method: 'POST',
+        body: JSON.stringify(depositData),
+      },
+      token
+    );
+    return response.data;
+  }
+
+  async recordWithdrawal(userId: string, vaultId: string, withdrawalData: WithdrawalRequest, token?: string): Promise<UserVaultPosition> {
+    const response = await this.request<UserVaultPosition>(
+      `/user-vault-position/user/${userId}/vault/${vaultId}/withdrawal`,
+      {
+        method: 'POST',
+        body: JSON.stringify(withdrawalData),
+      },
+      token
+    );
+    return response.data;
+  }
+
+  async updatePositionPerformance(
+    userId: string, 
+    vaultId: string, 
+    performanceData: {
+      current_value?: number;
+      high_water_mark?: number;
+      max_daily_drawdown?: number;
+      total_return_percentage?: number;
+      fees_paid?: number;
+    }, 
+    token?: string
+  ): Promise<UserVaultPosition> {
+    const response = await this.request<UserVaultPosition>(
+      `/user-vault-position/user/${userId}/vault/${vaultId}/performance`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(performanceData),
+      },
+      token
+    );
     return response.data;
   }
 }

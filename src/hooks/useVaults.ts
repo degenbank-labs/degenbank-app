@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiService, Vault, GetVaultsResponse } from "@/lib/api";
 
 export interface VaultWithMetrics extends Vault {
@@ -85,7 +85,7 @@ export const useVaults = () => {
     }
   };
 
-  const getVaultById = async (
+  const getVaultById = useCallback(async (
     vaultId: string
   ): Promise<VaultWithMetrics | null> => {
     try {
@@ -104,7 +104,7 @@ export const useVaults = () => {
       console.error("Error fetching vault by ID:", err);
       return null;
     }
-  };
+  }, []);
 
   const refreshVaults = () => {
     fetchVaults();

@@ -214,7 +214,7 @@ export default function VaultDetailPage() {
       }
     };
     fetchVault();
-  }, [vaultId, getVaultById]);
+  }, [vaultId]);
 
   // Fetch manager data when vault data is available
   useEffect(() => {
