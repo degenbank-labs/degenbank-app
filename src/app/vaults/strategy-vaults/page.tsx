@@ -1,12 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   TrophyIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
   EyeIcon,
   ExclamationTriangleIcon,
   FireIcon,
@@ -15,12 +14,22 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import Particles from "@/components/ui/particles";
-import { ChartArea, VaultIcon, Loader2 } from "lucide-react";
+
 import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
+import { useVaultsPerformance } from "@/hooks/useVaultsPerformance";
 import { getVaultStatus, getStatusBadgeClass } from "@/utils/battleStatus";
+import { Loader2 } from "lucide-react";
 
 export default function StrategyVaultsPage() {
   const { vaults, stats, loading, error, refreshVaults } = useVaults();
+
+  // Memoize vault IDs to prevent infinite API calls
+  const vaultIds = useMemo(
+    () => vaults.map((vault) => vault.vault_id),
+    [vaults]
+  );
+  const { getVaultPerformance, loading: performanceLoading } =
+    useVaultsPerformance(vaultIds);
 
   const formatCurrency = (amount: number | null | undefined) => {
     // Convert to number and handle null/undefined/invalid values
@@ -39,6 +48,20 @@ export default function StrategyVaultsPage() {
     // Convert to number and handle null/undefined/invalid values
     const numericAPY = Number(apy) || 0;
     return `${numericAPY.toFixed(1)}%`;
+  };
+
+  const formatPerformance = (roi: number | null | undefined) => {
+    if (roi === null || roi === undefined) {
+      return { value: "N/A", className: "text-white" };
+    }
+
+    const numericROI = Number(roi);
+    const isPositive = numericROI >= 0;
+
+    return {
+      value: `${isPositive ? "+" : ""}${numericROI.toFixed(2)}%`,
+      className: isPositive ? "text-profit" : "text-loss",
+    };
   };
 
   const getBattleStatusBadge = (vault: VaultWithMetrics) => {
@@ -192,8 +215,7 @@ export default function StrategyVaultsPage() {
         </div>
 
         {/* Redesigned Stats Overview */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Total TVL Card */}
+        {/* <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="border-border space-y-4 rounded-none border bg-black/80 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -222,7 +244,6 @@ export default function StrategyVaultsPage() {
             </div>
           </div>
 
-          {/* Total P&L Card */}
           <div className="border-border space-y-4 rounded-none border bg-black/80 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -261,7 +282,7 @@ export default function StrategyVaultsPage() {
               ></div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap justify-center gap-4">
@@ -309,36 +330,39 @@ export default function StrategyVaultsPage() {
                   <div>
                     <div className="text-muted-foreground text-sm">TVL</div>
                     <div className="text-primary text-lg font-bold">
-                      {/* TODO: Replace with actual TVL from backend */}$ 0.0M
+                      {/* TODO: Replace with actual TVL from backend */}$ 0.0
                     </div>
                   </div>
                 </div>
 
                 {/* Performance Metrics */}
                 <div className="space-y-3">
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-muted-foreground text-sm font-medium">
                     Performance
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="text-center">
-                      <div className="text-muted-foreground">1D</div>
-                      <div className="text-muted-foreground font-bold">
-                        {/* TODO: Replace with actual daily performance from backend */}
-                        N/A
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <div className="text-muted-foreground">14D</div>
+                      <div
+                        className={`font-bold ${formatPerformance(getVaultPerformance(vault.vault_id).performance14D).className}`}
+                      >
+                        {
+                          formatPerformance(
+                            getVaultPerformance(vault.vault_id).performance14D
+                          ).value
+                        }
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-muted-foreground">7D</div>
-                      <div className="text-muted-foreground font-bold">
-                        {/* TODO: Replace with actual weekly performance from backend */}
-                        N/A
-                      </div>
-                    </div>
-                    <div className="text-center">
+                    <div>
                       <div className="text-muted-foreground">30D</div>
-                      <div className="text-muted-foreground font-bold">
-                        {/* TODO: Replace with actual monthly performance from backend */}
-                        N/A
+                      <div
+                        className={`font-bold ${formatPerformance(getVaultPerformance(vault.vault_id).performance30D).className}`}
+                      >
+                        {
+                          formatPerformance(
+                            getVaultPerformance(vault.vault_id).performance30D
+                          ).value
+                        }
                       </div>
                     </div>
                   </div>

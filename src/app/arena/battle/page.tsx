@@ -292,14 +292,7 @@ export default function BattleArenaPage() {
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="text-profit border-profit rounded-none px-4 py-2"
-                >
-                  <CurrencyDollarIcon className="mr-2 h-4 w-4" />$
-                  {(realTimeStats.totalPrizes / 1000).toFixed(0)}K Total Prizes
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="text-purple rounded-none border-purple-400 bg-transparent px-4 py-2"
+                  className="rounded-none border-purple-400 bg-transparent px-4 py-2 text-purple-400"
                 >
                   <UsersIcon className="mr-2 h-4 w-4" />
                   {realTimeStats.totalParticipants} Total Participants

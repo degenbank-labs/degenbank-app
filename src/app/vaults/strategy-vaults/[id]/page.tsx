@@ -45,9 +45,9 @@ export default function VaultDetailPage() {
   const battleId = searchParams.get("battleId");
   const [activeTab, setActiveTab] = useState("vault-performance");
   const [selectedPeriod, setSelectedPeriod] = useState<"14D" | "30D">("30D");
-  const [selectedChart, setSelectedChart] = useState<"roi" | "vaultBalance">(
-    "roi"
-  );
+  const [selectedChart, setSelectedChart] = useState<
+    "roi" | "vaultBalance" | "sharePrice"
+  >("roi");
   const [depositWithdrawTab, setDepositWithdrawTab] = useState<
     "deposit" | "withdraw"
   >("deposit");
@@ -111,8 +111,17 @@ export default function VaultDetailPage() {
   const { balance, isLoading: balanceLoading, tokenSymbol } = useTokenBalance();
 
   // Use real performance data
-  const { performanceData, refetch: refetchPerformance } =
-    useVaultPerformance(vaultId);
+  const {
+    performanceData,
+    summary,
+    loading: performanceLoading,
+    refetch: refetchPerformance,
+  } = useVaultPerformance(vaultId);
+
+  // Refetch performance data when period changes
+  useEffect(() => {
+    refetchPerformance(selectedPeriod);
+  }, [selectedPeriod, refetchPerformance]);
 
   const chartData = useMemo(() => {
     // Use real performance data only
@@ -132,6 +141,11 @@ export default function VaultDetailPage() {
         return currentData.map((item) => ({
           ...item,
           value: item.vaultBalance,
+        }));
+      case "sharePrice":
+        return currentData.map((item) => ({
+          ...item,
+          value: item.sharePrice,
         }));
       default:
         return currentData.map((item) => ({
@@ -180,9 +194,16 @@ export default function VaultDetailPage() {
         };
       case "vaultBalance":
         return {
-          label: "Vault Balance (M USDC)",
-          format: (value: number) => `${value.toFixed(2)}M USDC`,
+          label: "Vault Balance (USDC)",
+          format: (value: number) => `${value.toFixed(2)} USDC`,
           color: "#8b5cf6",
+          hasNegativeValues: false,
+        };
+      case "sharePrice":
+        return {
+          label: "Share Price (USDC)",
+          format: (value: number) => `$${value.toFixed(4)}`,
+          color: "#6fb7a5",
           hasNegativeValues: false,
         };
       default:
@@ -648,7 +669,7 @@ export default function VaultDetailPage() {
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                $ 0.0M
+                $ 0.0
               </div>
             </div>
             <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">
@@ -705,6 +726,16 @@ export default function VaultDetailPage() {
                         }`}
                       >
                         Vault Balance
+                      </button>
+                      <button
+                        onClick={() => setSelectedChart("sharePrice")}
+                        className={`min-w-0 flex-1 px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
+                          selectedChart === "sharePrice"
+                            ? "bg-primary text-black"
+                            : "text-muted-foreground bg-transparent hover:text-white"
+                        }`}
+                      >
+                        Share Price
                       </button>
                     </div>
 
@@ -880,6 +911,8 @@ export default function VaultDetailPage() {
                                     value < 0 ? "text-loss" : "text-profit";
                                 } else if (selectedChart === "vaultBalance") {
                                   textColor = "text-[#8b5cf6]";
+                                } else if (selectedChart === "sharePrice") {
+                                  textColor = "text-[#f59e0b]";
                                 }
 
                                 return (
