@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
 
 export function Hero() {
   const { login, ready } = useAuth();
@@ -30,14 +31,12 @@ export function Hero() {
 
           {/* CTA Buttons */}
           <div className="relative z-10 mb-8 flex flex-col items-center justify-center gap-6 sm:flex-row">
-            <Button
-              onClick={login}
-              disabled={!ready}
-              className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 min-w-[140px] cursor-pointer px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Go to Arena
-              <ArrowRightIcon className="ml-2 h-5 w-5" />
-            </Button>
+            <Link href="/arena/battle">
+              <Button className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 min-w-[140px] cursor-pointer px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg">
+                Go to Arena
+                <ArrowRightIcon className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

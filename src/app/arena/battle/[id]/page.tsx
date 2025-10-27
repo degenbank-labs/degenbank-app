@@ -14,7 +14,7 @@ import {
   ShieldCheckIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { Loader2, Swords } from "lucide-react";
+import { Swords } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 import { useBattleVaults } from "@/hooks/useBattleVaults";
 import { getBattlePhases, getBattlePhase } from "@/utils/battleStatus";
@@ -26,7 +26,7 @@ export default function BattleDetailPage() {
   const [selectedVault, setSelectedVault] = useState<string | null>(null);
 
   // Use battles hook for real data
-  const { getBattleById, loading, error } = useBattles();
+  const { getBattleById, error } = useBattles();
   const [battle, setBattle] = useState<
     import("@/hooks/useBattles").BattleWithMetrics | null
   >(null);
@@ -58,12 +58,13 @@ export default function BattleDetailPage() {
     if (!battleId || !battle) return;
 
     // Only update if battle is still active (not completed or ended)
-    const isActiveBattle = battle.status === 'open_deposit' || 
-                          battle.status === 'ongoing_battle' ||
-                          new Date(battle.battle_end) > new Date();
+    const isActiveBattle =
+      battle.status === "open_deposit" ||
+      battle.status === "ongoing_battle" ||
+      new Date(battle.battle_end) > new Date();
 
     if (!isActiveBattle) {
-      console.log('Battle is not active, skipping real-time updates');
+      console.log("Battle is not active, skipping real-time updates");
       return;
     }
 
@@ -72,11 +73,11 @@ export default function BattleDetailPage() {
         const battleData = await getBattleById(battleId);
         if (battleData) {
           setBattle(battleData);
-          
+
           // Stop updating if battle has ended
           const battleEnded = new Date(battleData.battle_end) <= new Date();
           if (battleEnded) {
-            console.log('Battle has ended, stopping real-time updates');
+            console.log("Battle has ended, stopping real-time updates");
             clearInterval(interval);
           }
         }
@@ -128,24 +129,6 @@ export default function BattleDetailPage() {
         return <ShieldCheckIcon className="h-4 w-4 text-gray-400" />;
     }
   };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white">
-        <MainNavbar />
-        <div className="relative overflow-hidden">
-          <LightRays />
-          <div className="relative z-10 flex min-h-[80vh] items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="text-primary mx-auto mb-4 h-8 w-8 animate-spin" />
-              <p className="text-neutral-400">Loading battle details...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Error state
   if (error) {

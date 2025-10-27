@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   TrophyIcon,
   CurrencyDollarIcon,
@@ -16,7 +16,7 @@ import { MainNavbar } from "@/components/main-navbar";
 import Cubes from "@/components/ui/cubes";
 import LightRays from "@/components/ui/light-rays";
 import CubeLoader from "@/components/ui/cube-loader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useBattles, type BattleWithMetrics } from "@/hooks/useBattles";
 import { getBattlePhase } from "@/utils/battleStatus";
@@ -24,21 +24,11 @@ import { getBattlePhase } from "@/utils/battleStatus";
 export default function BattleArenaPage() {
   const router = useRouter();
   const [hoveredArena, setHoveredArena] = useState<string | null>(null);
-  const [selectedCube, setSelectedCube] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("all");
 
   // Use battles hook for real data
-  const {
-    battles: allArenas,
-    stats,
-    loading,
-    error,
-    refreshBattles,
-  } = useBattles();
+  const { battles: allArenas, loading, error, refreshBattles } = useBattles();
 
   // Filter arenas based on active tab using timestamp-based logic
   const getFilteredArenas = (tab: string): BattleWithMetrics[] => {
@@ -126,10 +116,13 @@ export default function BattleArenaPage() {
   ) => {
     setIsLoading(true);
 
-    // Simulate loading time before navigation
+    // Smooth transition timing - let the cube loader complete its animation
+    // before navigating to prevent visual glitches
     setTimeout(() => {
       router.push(`/arena/battle/${arena.battle_id}`);
-    }, 2000);
+      // Don't reset loading state immediately - let the new page handle it
+      // This prevents the glitch between pages
+    }, 1500);
   };
 
   const handleCubeHover = (
@@ -153,6 +146,21 @@ export default function BattleArenaPage() {
 
     return () => clearInterval(interval);
   }, [refreshBattles]);
+
+  // Cleanup loading state on component unmount to prevent glitches
+  useEffect(() => {
+    return () => {
+      // Reset loading state when component unmounts
+      setIsLoading(false);
+    };
+  }, []);
+
+  // Handle router events for smooth transitions
+  useEffect(() => {
+    return () => {
+      setIsLoading(false);
+    };
+  }, [router]);
 
   // Loading state
   if (loading) {

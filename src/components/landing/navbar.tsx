@@ -47,7 +47,7 @@ export function Navbar() {
               priority
             />
             <p className="font-cirka ml-2 text-2xl font-bold text-white md:text-4xl">
-              DEGEN RESERVE
+              Degen Reserve
             </p>
           </div>
 
@@ -136,7 +136,7 @@ export function Navbar() {
             <Link href="/vaults/strategy-vaults">
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white w-full"
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Vault
               </button>
@@ -144,7 +144,7 @@ export function Navbar() {
             <Link href="/arena/battle">
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white w-full"
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Arena
               </button>

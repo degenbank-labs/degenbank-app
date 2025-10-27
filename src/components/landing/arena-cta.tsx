@@ -52,7 +52,7 @@ export default function ArenaCTA() {
 
               {/* CTA Button */}
               <div className="pt-2 md:pt-4">
-                <Link href="/arena">
+                <Link href="/arena/battle">
                   <Button
                     size="lg"
                     className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 w-full sm:w-auto min-w-[140px] cursor-pointer px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"

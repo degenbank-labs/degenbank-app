@@ -114,7 +114,7 @@ export function MainNavbar() {
                 priority
               />
               <p className="font-cirka ml-2 text-xl font-bold text-white md:text-2xl">
-                DEGEN RESERVE
+                Degen Reserve
               </p>
             </Link>
 
@@ -252,21 +252,21 @@ export function MainNavbar() {
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  
+
                   {/* Balance Display */}
-                  <DropdownMenuItem className="rounded-none cursor-default">
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-sm font-medium text-gray-600">Balance:</span>
+                  <DropdownMenuItem className="cursor-default rounded-none">
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">
+                        Balance:
+                      </span>
                       <span className="text-sm font-semibold">
-                        {balanceLoading ? (
-                          "Loading..."
-                        ) : (
-                          formatUSDC(balance, { showSymbol: true })
-                        )}
+                        {balanceLoading
+                          ? "Loading..."
+                          : formatUSDC(balance, { showSymbol: true })}
                       </span>
                     </div>
                   </DropdownMenuItem>
-                  
+
                   {walletAddress && (
                     <DropdownMenuItem
                       onClick={() => handleCopyAddress(walletAddress)}

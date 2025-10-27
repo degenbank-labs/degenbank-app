@@ -41,9 +41,7 @@ export default function StrategyVaultsPage() {
     return `${numericAPY.toFixed(1)}%`;
   };
 
-  const getBattleStatusBadge = (
-    vault: VaultWithMetrics
-  ) => {
+  const getBattleStatusBadge = (vault: VaultWithMetrics) => {
     // TODO: Replace with actual vault status check from backend
     // if (vault.status === 'disqualified') {
     //   return (
@@ -60,7 +58,7 @@ export default function StrategyVaultsPage() {
     // Only show status badge if vault has battle association (locked_start and locked_end)
     if (vault.locked_start && vault.locked_end) {
       const status = getVaultStatus(vault.locked_start, vault.locked_end);
-      
+
       if (status === "In Battle") {
         return (
           <Badge
@@ -290,7 +288,9 @@ export default function StrategyVaultsPage() {
                       className="h-8 w-8 rounded-full"
                     />
                     <div className="space-y-2">
-                      <CardTitle className="text-lg">{vault.vault_name}</CardTitle>
+                      <CardTitle className="text-lg">
+                        {vault.vault_name}
+                      </CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
                         {getBattleStatusBadge(vault)}
                       </div>
@@ -309,8 +309,7 @@ export default function StrategyVaultsPage() {
                   <div>
                     <div className="text-muted-foreground text-sm">TVL</div>
                     <div className="text-primary text-lg font-bold">
-                      {/* TODO: Replace with actual TVL from backend */}
-                      $ 0.0M
+                      {/* TODO: Replace with actual TVL from backend */}$ 0.0M
                     </div>
                   </div>
                 </div>
@@ -323,21 +322,21 @@ export default function StrategyVaultsPage() {
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="text-center">
                       <div className="text-muted-foreground">1D</div>
-                      <div className="font-bold text-muted-foreground">
+                      <div className="text-muted-foreground font-bold">
                         {/* TODO: Replace with actual daily performance from backend */}
                         N/A
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">7D</div>
-                      <div className="font-bold text-muted-foreground">
+                      <div className="text-muted-foreground font-bold">
                         {/* TODO: Replace with actual weekly performance from backend */}
                         N/A
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">30D</div>
-                      <div className="font-bold text-muted-foreground">
+                      <div className="text-muted-foreground font-bold">
                         {/* TODO: Replace with actual monthly performance from backend */}
                         N/A
                       </div>
@@ -388,21 +387,25 @@ export default function StrategyVaultsPage() {
               </p>
             </div>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button
-                variant="outline"
-                size="lg"
-                className="cursor-pointer rounded-none hover:bg-gray-900 hover:text-white"
-              >
-                <TrophyIcon className="mr-2 h-5 w-5" />
-                View Leaderboard
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="cursor-pointer rounded-none hover:bg-gray-900 hover:text-white"
-              >
-                Go to Arena
-              </Button>
+              <Link href="/arena/leaderboard">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="cursor-pointer rounded-none hover:bg-gray-900 hover:text-white"
+                >
+                  <TrophyIcon className="mr-2 h-5 w-5" />
+                  View Leaderboard
+                </Button>
+              </Link>
+              <Link href="/arena/battle">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="cursor-pointer rounded-none hover:bg-gray-900 hover:text-white"
+                >
+                  Go to Arena
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
