@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   ShieldCheckIcon,
@@ -10,7 +9,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
@@ -18,10 +17,10 @@ import {
   useVaultPerformance,
   PerformanceDataPoint,
 } from "@/hooks/useVaultPerformance";
-import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useVaultOperations } from "@/hooks/useVaultOperations";
 import { useAuth } from "@/hooks/useAuth";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { apiService, Manager, Battle } from "@/lib/api";
 import {
   ComposedChart,
   Area,
@@ -32,36 +31,77 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { UsdcIconSvg } from "@/components/svg";
-
-// Using VaultWithMetrics interface from useVaults hook instead of local VaultData interface
+import { formatUSDC } from "@/lib/utils";
+import { TransactionSuccessModal } from "@/components/ui/transaction-success-modal";
 
 export default function VaultDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const vaultId = params.id as string;
-  
+
   // Get referrer information from URL parameters
-  const fromPage = searchParams.get('from');
-  const battleId = searchParams.get('battleId');
+  const fromPage = searchParams.get("from");
+  const battleId = searchParams.get("battleId");
   const [activeTab, setActiveTab] = useState("vault-performance");
   const [selectedPeriod, setSelectedPeriod] = useState<"14D" | "30D">("30D");
-  const [selectedChart, setSelectedChart] = useState<
-    "roi" | "sharePrice" | "vaultBalance"
-  >("roi");
+  const [selectedChart, setSelectedChart] = useState<"roi" | "vaultBalance">(
+    "roi"
+  );
   const [depositWithdrawTab, setDepositWithdrawTab] = useState<
     "deposit" | "withdraw"
   >("deposit");
   const [amount, setAmount] = useState<string>("");
 
+  // Input validation function to only allow numbers and decimals
+  const handleAmountChange = (value: string) => {
+    // Remove any non-numeric characters except decimal point
+    const cleanValue = value.replace(/[^0-9.]/g, "");
+
+    // Prevent multiple decimal points
+    const parts = cleanValue.split(".");
+    if (parts.length > 2) {
+      return;
+    }
+
+    // Prevent leading zeros (except for decimal numbers like 0.5)
+    if (
+      cleanValue.length > 1 &&
+      cleanValue[0] === "0" &&
+      cleanValue[1] !== "."
+    ) {
+      return;
+    }
+
+    setAmount(cleanValue);
+  };
+
+  // Check if amount is valid for transactions
+  const isAmountValid = () => {
+    if (!amount || amount === "") return false;
+    const numAmount = parseFloat(amount);
+    return !isNaN(numAmount) && numAmount > 0;
+  };
+
   // Use real API data
   const { getVaultById, loading, error } = useVaults();
   const [vaultData, setVaultData] = useState<VaultWithMetrics | null>(null);
+  const [managerData, setManagerData] = useState<Manager | null>(null);
+  const [managerLoading, setManagerLoading] = useState(false);
+  const [battleData, setBattleData] = useState<Battle | null>(null);
+  const [battleLoading, setBattleLoading] = useState(false);
 
   // Auth and vault operations
-  const { authenticated, walletAddress, login } = useAuth();
-  const { deposit, withdraw, depositState, withdrawState, isConnected } =
-    useVaultOperations();
+  const { authenticated, login } = useAuth();
+  const {
+    deposit,
+    withdraw,
+    depositState,
+    withdrawState,
+    successModal,
+    closeSuccessModal,
+    isConnected,
+  } = useVaultOperations();
 
   // User balance
   const { balance, isLoading: balanceLoading, tokenSymbol } = useTokenBalance();
@@ -69,22 +109,17 @@ export default function VaultDetailPage() {
   // Use real performance data
   const {
     performanceData,
-    loading: performanceLoading,
-    error: performanceError,
     refetch: refetchPerformance,
   } = useVaultPerformance(vaultId);
 
-  // Use real leaderboard data
-  const { managers: leaderboardData } = useLeaderboard();
-
   // Handle dynamic back navigation
   const handleBackNavigation = () => {
-    if (fromPage === 'battle' && battleId) {
+    if (fromPage === "battle" && battleId) {
       // Navigate back to specific battle detail page
       router.push(`/arena/battle/${battleId}`);
     } else {
       // Default navigation to vaults list
-      router.push('/vaults/strategy-vaults');
+      router.push("/vaults/strategy-vaults");
     }
   };
 
@@ -100,14 +135,52 @@ export default function VaultDetailPage() {
       }
     };
     fetchVault();
-  }, [vaultId]); // Removed getVaultById from dependencies to prevent unnecessary re-renders
+  }, [vaultId, getVaultById]);
+
+  // Fetch manager data when vault data is available
+  useEffect(() => {
+    const fetchManager = async () => {
+      if (vaultData?.manager_id) {
+        setManagerLoading(true);
+        try {
+          const manager = await apiService.getManager(vaultData.manager_id);
+          setManagerData(manager);
+        } catch (err) {
+          console.error("Failed to fetch manager:", err);
+        } finally {
+          setManagerLoading(false);
+        }
+      }
+    };
+    fetchManager();
+  }, [vaultData?.manager_id]);
+
+  // Fetch battle data when vault data is available and has battle_id
+  useEffect(() => {
+    const fetchBattle = async () => {
+      if (vaultData?.battle_id) {
+        setBattleLoading(true);
+        try {
+          const battle = await apiService.getBattle(
+            vaultData.battle_id.toString()
+          );
+          setBattleData(battle);
+        } catch (err) {
+          console.error("Failed to fetch battle:", err);
+        } finally {
+          setBattleLoading(false);
+        }
+      }
+    };
+    fetchBattle();
+  }, [vaultData?.battle_id]);
 
   // Refetch performance data when period changes
   useEffect(() => {
     if (vaultId) {
       refetchPerformance(selectedPeriod);
     }
-  }, [selectedPeriod, vaultId]);
+  }, [selectedPeriod, vaultId, refetchPerformance]);
 
   // Handle deposit
   const handleDeposit = async () => {
@@ -200,6 +273,54 @@ export default function VaultDetailPage() {
     }
   };
 
+  // Helper function to get battle status display
+  const getBattleStatusDisplay = () => {
+    if (battleLoading) {
+      return <Loader2 className="h-4 w-4 animate-spin" />;
+    }
+
+    if (!vaultData?.battle_id) {
+      return <span className="text-muted-foreground">No Battle</span>;
+    }
+
+    if (!battleData) {
+      return <span className="text-muted-foreground">-</span>;
+    }
+
+    // Use current_phase from battle data for status
+    const phase = battleData.current_phase;
+    let statusColor = "text-white";
+    let statusText: string;
+
+    switch (phase) {
+      case "Registration":
+        statusColor = "text-primary";
+        statusText = "Registration Open";
+        break;
+      case "Stake Phase":
+        statusColor = "text-primary";
+        statusText = "Staking Phase";
+        break;
+      case "Battle Phase":
+        statusColor = "text-purple-400";
+        statusText = "In Battle";
+        break;
+      case "Resolution Phase":
+        statusColor = "text-profit";
+        statusText = "Resolving";
+        break;
+      case "Completed":
+        statusColor = "text-profit";
+        statusText = "Completed";
+        break;
+      default:
+        statusColor = "text-muted-foreground";
+        statusText = battleData.battle_status;
+    }
+
+    return <span className={`font-medium ${statusColor}`}>{statusText}</span>;
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -264,11 +385,6 @@ export default function VaultDetailPage() {
           ...item,
           value: item.roi,
         }));
-      case "sharePrice":
-        return currentData.map((item) => ({
-          ...item,
-          value: item.sharePrice,
-        }));
       case "vaultBalance":
         return currentData.map((item) => ({
           ...item,
@@ -320,13 +436,6 @@ export default function VaultDetailPage() {
           maxValue: maxROI,
           minValue: minROI,
         };
-      case "sharePrice":
-        return {
-          label: "Share Price (USDC)",
-          format: (value: number) => `${value.toFixed(3)} USDC`,
-          color: "#6fb7a5",
-          hasNegativeValues: false,
-        };
       case "vaultBalance":
         return {
           label: "Vault Balance (M USDC)",
@@ -347,42 +456,10 @@ export default function VaultDetailPage() {
   const chartData = getChartData();
   const chartConfig = getChartConfig();
 
-  const formatPercentage = (percentage: number | null | undefined) => {
-    // Convert to number and handle null/undefined/invalid values
-    const numericPercentage = Number(percentage) || 0;
-    return `${numericPercentage >= 0 ? "+" : ""}${numericPercentage.toFixed(2)}%`;
-  };
-
   const formatAPY = (apy: number | null | undefined) => {
     // Convert to number and handle null/undefined/invalid values
     const numericAPY = Number(apy) || 0;
     return `${numericAPY.toFixed(1)}%`;
-  };
-
-  const getManagerBadge = (managerType?: string) => {
-    // Ensure managerType has a fallback value
-    const safeManagerType = managerType || "verified";
-
-    switch (safeManagerType) {
-      case "verified":
-        return (
-          <div className="flex items-center space-x-1">
-            <ShieldCheckIcon className="text-primary h-4 w-4" />
-          </div>
-        );
-      case "ecosystem":
-        return (
-          <div className="flex items-center space-x-1">
-            <UserGroupIcon className="h-4 w-4 text-purple-400/60" />
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center space-x-1">
-            <ShieldCheckIcon className="text-primary h-4 w-4" />
-          </div>
-        );
-    }
   };
 
   return (
@@ -391,7 +468,7 @@ export default function VaultDetailPage() {
       <div className="mx-auto max-w-7xl px-4 pt-4">
         <button
           onClick={handleBackNavigation}
-          className="text-muted-foreground flex items-center text-sm hover:text-white cursor-pointer"
+          className="text-muted-foreground flex cursor-pointer items-center text-sm hover:text-white"
         >
           ← Back
         </button>
@@ -403,8 +480,14 @@ export default function VaultDetailPage() {
           <div className="flex w-full flex-col items-start space-y-3 sm:w-auto sm:flex-row sm:space-y-0 sm:space-x-4">
             {/* Symbol Image */}
             <div className="flex-shrink-0">
-              <div className="bg-primary/20 flex h-12 w-12 items-center justify-center rounded-lg">
-                <UsdcIconSvg className="h-8 w-8" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full">
+                <Image
+                  src={vaultData?.vault_image || "/placeholder.svg"}
+                  alt={vaultData?.vault_name || "Vault Symbol"}
+                  width={48}
+                  height={48}
+                  className="h-12 w-12 object-contain"
+                />
               </div>
             </div>
 
@@ -416,22 +499,47 @@ export default function VaultDetailPage() {
                 </h1>
               </div>
               <div className="flex flex-col space-y-2 text-sm sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-2">
                   <span className="text-muted-foreground">Manager:</span>
-                  {getManagerBadge(vaultData?.managerType)}
-                  <span className="font-medium text-white">
-                    {vaultData?.manager?.manager_name || "Unknown Manager"}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-muted-foreground">Deposit:</span>
-                    <UsdcIconSvg className="h-4 w-4" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-muted-foreground">Trading:</span>
-                    <UsdcIconSvg className="h-4 w-4" />
-                  </div>
+                  {managerLoading ? (
+                    <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200" />
+                  ) : managerData?.image ? (
+                    <Image
+                      src={managerData.image}
+                      alt={managerData.manager_name}
+                      width={16}
+                      height={16}
+                      className="h-4 w-4 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        e.currentTarget.nextElementSibling?.classList.remove(
+                          "hidden"
+                        );
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200">
+                      <UserGroupIcon className="h-4 w-4 text-gray-400" />
+                    </div>
+                  )}
+                  <p
+                    className="cursor-pointer font-medium text-white underline"
+                    onClick={() =>
+                      window.open(
+                        `https://solscan.io/account/${managerData?.wallet_address}`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    {managerData?.manager_name ||
+                      vaultData?.manager?.manager_name ||
+                      "Unknown Manager"}
+                  </p>
+                  {managerData?.is_kyb && (
+                    <div className="flex items-center space-x-1">
+                      <ShieldCheckIcon className="text-primary h-4 w-4" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -485,35 +593,28 @@ export default function VaultDetailPage() {
                 {formatAPY(vaultData?.apy)}
               </div>
             </div>
-            <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">
-              <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                Strategy
-              </div>
-              <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.vault_strategy || "N/A"}
-              </div>
-            </div>
             <div className="border-border border-r px-4 py-4 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                ${" "}
-                {vaultData?.total_value_locked
-                  ? (Number(vaultData.total_value_locked) / 1000000).toFixed(
-                      1
-                    ) + "M"
-                  : vaultData?.total_value_locked && typeof vaultData.total_value_locked === "number"
-                  ? (vaultData.total_value_locked / 1000000).toFixed(1) + "M"
-                    : "0.0M"}
+                $ 0.0M
+              </div>
+            </div>
+            <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">
+              <div className="text-muted-foreground text-xs tracking-wide uppercase">
+                Vault Type
+              </div>
+              <div className="mt-1 text-base font-bold text-white sm:text-lg">
+                {vaultData?.vault_type || "-"}
               </div>
             </div>
             <div className="px-4 py-4 sm:px-8">
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                Risk Level
+                Status
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                {vaultData?.risk_level || "Medium"}
+                {getBattleStatusDisplay()}
               </div>
             </div>
           </div>
@@ -544,16 +645,6 @@ export default function VaultDetailPage() {
                         }`}
                       >
                         ROI
-                      </button>
-                      <button
-                        onClick={() => setSelectedChart("sharePrice")}
-                        className={`min-w-0 flex-1 px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
-                          selectedChart === "sharePrice"
-                            ? "bg-primary text-black"
-                            : "text-muted-foreground bg-transparent hover:text-white"
-                        }`}
-                      >
-                        Share Price
                       </button>
                       <button
                         onClick={() => setSelectedChart("vaultBalance")}
@@ -737,8 +828,6 @@ export default function VaultDetailPage() {
                                 if (selectedChart === "roi") {
                                   textColor =
                                     value < 0 ? "text-loss" : "text-profit";
-                                } else if (selectedChart === "sharePrice") {
-                                  textColor = "text-[#6fb7a5]";
                                 } else if (selectedChart === "vaultBalance") {
                                   textColor = "text-[#8b5cf6]";
                                 }
@@ -796,8 +885,7 @@ export default function VaultDetailPage() {
                     {/* Bottom note */}
                     <div className="border-border mt-4 border-t pt-4">
                       <div className="text-muted-foreground text-xs">
-                        * ROI is based on the change in share price, not
-                        inclusive of fees
+                        * ROI not inclusive of fees
                       </div>
                     </div>
                   </CardContent>
@@ -850,7 +938,10 @@ export default function VaultDetailPage() {
                           onClick={handleMaxClick}
                           className="text-muted-foreground cursor-pointer text-sm hover:text-white"
                         >
-                          Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                          Max:{" "}
+                          {balanceLoading
+                            ? "..."
+                            : formatUSDC(balance, { showSymbol: false })}
                         </button>
                       </div>
                       <div className="bg-background border-border relative border">
@@ -861,11 +952,11 @@ export default function VaultDetailPage() {
                           </span>
                         </div>
                         <input
-                          type="number"
-                          placeholder="0"
+                          type="text"
+                          placeholder="0.00"
                           value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          onChange={(e) => handleAmountChange(e.target.value)}
+                          className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
                         />
                       </div>
                     </div>
@@ -877,9 +968,8 @@ export default function VaultDetailPage() {
                         <span className="text-white">
                           {balanceLoading
                             ? "Loading..."
-                            : `${balance.toFixed(4)} ${tokenSymbol}`}
+                            : formatUSDC(balance, { showSymbol: true })}
                         </span>
-                        <UsdcIconSvg width={16} height={16} />
                       </div>
                     </div>
 
@@ -902,9 +992,10 @@ export default function VaultDetailPage() {
                             : handleWithdraw
                         }
                         disabled={
-                          depositWithdrawTab === "deposit"
+                          !isAmountValid() ||
+                          (depositWithdrawTab === "deposit"
                             ? depositState.isLoading
-                            : withdrawState.isLoading
+                            : withdrawState.isLoading)
                         }
                         className={`w-full cursor-pointer py-3 text-sm font-medium ${
                           depositWithdrawTab === "deposit"
@@ -921,68 +1012,6 @@ export default function VaultDetailPage() {
                             : "Request Withdrawal"}
                       </Button>
                     )}
-
-                    {/* Error Messages */}
-                    {depositState.error && depositWithdrawTab === "deposit" && (
-                      <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                        {depositState.error}
-                      </div>
-                    )}
-                    {withdrawState.error &&
-                      depositWithdrawTab === "withdraw" && (
-                        <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                          {withdrawState.error}
-                        </div>
-                      )}
-
-                    {/* Success Messages */}
-                    {depositState.txSignature &&
-                      !depositState.error &&
-                      depositWithdrawTab === "deposit" && (
-                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                          Deposit successful! Transaction:{" "}
-                          {depositState.txSignature}
-                        </div>
-                      )}
-                    {withdrawState.txSignature &&
-                      !withdrawState.error &&
-                      depositWithdrawTab === "withdraw" && (
-                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                          Withdrawal request successful! Transaction:{" "}
-                          {withdrawState.txSignature}
-                        </div>
-                      )}
-
-                    {/* Error Messages */}
-                    {depositState.error && depositWithdrawTab === "deposit" && (
-                      <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                        {depositState.error}
-                      </div>
-                    )}
-                    {withdrawState.error &&
-                      depositWithdrawTab === "withdraw" && (
-                        <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                          {withdrawState.error}
-                        </div>
-                      )}
-
-                    {/* Success Messages */}
-                    {depositState.txSignature &&
-                      !depositState.error &&
-                      depositWithdrawTab === "deposit" && (
-                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                          Deposit successful! Transaction:{" "}
-                          {depositState.txSignature}
-                        </div>
-                      )}
-                    {withdrawState.txSignature &&
-                      !withdrawState.error &&
-                      depositWithdrawTab === "withdraw" && (
-                        <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                          Withdrawal request successful! Transaction:{" "}
-                          {withdrawState.txSignature}
-                        </div>
-                      )}
                   </CardContent>
                 </Card>
               </div>
@@ -1009,14 +1038,8 @@ export default function VaultDetailPage() {
                     </Tooltip>
                     <div className="flex items-center gap-2">
                       <UsdcIconSvg width={16} height={16} />
-                      {/* TODO: Integrate with user cumulative deposits API */}
                       <span className="font-medium text-white">0</span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    {/* TODO: Integrate with user performance percentage API */}
-                    <span className="text-sm text-[#6B7280]">0%</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -1025,8 +1048,9 @@ export default function VaultDetailPage() {
                         Vault Shares
                       </span>
                     </Tooltip>
-                    {/* TODO: Integrate with user vault shares API */}
-                    <span className="font-medium text-white">0</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-white">0%</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -1117,7 +1141,10 @@ export default function VaultDetailPage() {
                         onClick={handleMaxClick}
                         className="text-muted-foreground cursor-pointer text-sm hover:text-white"
                       >
-                        Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                        Max:{" "}
+                        {balanceLoading
+                          ? "..."
+                          : formatUSDC(balance, { showSymbol: false })}
                       </button>
                     </div>
                     <div className="bg-background border-border relative border">
@@ -1128,11 +1155,11 @@ export default function VaultDetailPage() {
                         </span>
                       </div>
                       <input
-                        type="number"
-                        placeholder="0"
+                        type="text"
+                        placeholder="Enter amount"
                         value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        onChange={(e) => handleAmountChange(e.target.value)}
+                        className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1144,9 +1171,8 @@ export default function VaultDetailPage() {
                       <span className="text-white">
                         {balanceLoading
                           ? "Loading..."
-                          : `${balance.toFixed(4)} ${tokenSymbol}`}
+                          : formatUSDC(balance, { showSymbol: true })}
                       </span>
-                      <UsdcIconSvg width={16} height={16} />
                     </div>
                   </div>
 
@@ -1169,9 +1195,10 @@ export default function VaultDetailPage() {
                           : handleWithdraw
                       }
                       disabled={
-                        depositWithdrawTab === "deposit"
+                        !isAmountValid() ||
+                        (depositWithdrawTab === "deposit"
                           ? depositState.isLoading
-                          : withdrawState.isLoading
+                          : withdrawState.isLoading)
                       }
                       className={`w-full cursor-pointer py-3 text-sm font-medium ${
                         depositWithdrawTab === "deposit"
@@ -1200,24 +1227,6 @@ export default function VaultDetailPage() {
                       {withdrawState.error}
                     </div>
                   )}
-
-                  {/* Success Messages */}
-                  {depositState.txSignature &&
-                    !depositState.error &&
-                    depositWithdrawTab === "deposit" && (
-                      <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                        Deposit successful! Transaction:{" "}
-                        {depositState.txSignature}
-                      </div>
-                    )}
-                  {withdrawState.txSignature &&
-                    !withdrawState.error &&
-                    depositWithdrawTab === "withdraw" && (
-                      <div className="mt-4 rounded border border-green-500/30 bg-green-900/20 p-3 text-sm text-green-400">
-                        Withdrawal request successful! Transaction:{" "}
-                        {withdrawState.txSignature}
-                      </div>
-                    )}
                 </CardContent>
               </Card>
             </div>
@@ -1239,37 +1248,20 @@ export default function VaultDetailPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <h4 className="mb-2 text-sm font-medium text-white">
+                      <h4 className="text-muted-foreground mb-2 text-sm font-medium">
                         Description
                       </h4>
-                      <p className="text-muted-foreground text-sm leading-relaxed">
+                      <p className="text-sm leading-relaxed text-white">
                         {vaultData.description}
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="mb-2 text-sm font-medium text-white">
-                        Strategy Type
+                      <h4 className="text-muted-foreground mb-2 text-sm font-medium">
+                        Strategy
                       </h4>
-                      <div className="flex items-center space-x-2">
-                        <Badge
-                          variant="outline"
-                          className="text-primary border-primary rounded-none"
-                        >
-                          {vaultData.vault_strategy}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={`rounded-none ${
-                            vaultData.risk_level === "Low"
-                              ? "text-profit border-profit"
-                              : vaultData.risk_level === "Medium"
-                                ? "border-yellow-400 text-yellow-400"
-                                : "text-loss border-loss"
-                          }`}
-                        >
-                          {vaultData.risk_level} Risk
-                        </Badge>
+                      <div className="flex items-center space-x-2 text-sm text-white">
+                        {vaultData.vault_strategy}
                       </div>
                     </div>
 
@@ -1297,7 +1289,7 @@ export default function VaultDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-border hover:bg-background/50 ml-4 flex items-center space-x-2 text-white"
+                        className="border-border ml-4 flex cursor-pointer items-center space-x-2 text-white"
                         onClick={() => {
                           if (vaultData?.vault_address) {
                             window.open(
@@ -1357,27 +1349,23 @@ export default function VaultDetailPage() {
                             {vaultData.min_deposit} USDC
                           </span>
                         </div>
-                        {/* Max deposit removed - not available in VaultWithMetrics */}
                       </div>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground text-sm">
-                            Vault Age
+                            Risk Level
                           </span>
                           <span className="font-medium text-white">
-                            {vaultData.age}
+                            {vaultData.risk_level || "-"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground text-sm">
-                            Status
+                            Vault Type
                           </span>
-                          <Badge
-                            variant="outline"
-                            className="text-profit border-profit rounded-none"
-                          >
-                            {vaultData.battle_status}
-                          </Badge>
+                          <span className="font-medium text-white">
+                            {vaultData.vault_type}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1431,7 +1419,10 @@ export default function VaultDetailPage() {
                           onClick={handleMaxClick}
                           className="text-muted-foreground cursor-pointer text-sm hover:text-white"
                         >
-                          Max: {balanceLoading ? "..." : balance.toFixed(4)}
+                          Max:{" "}
+                          {balanceLoading
+                            ? "..."
+                            : formatUSDC(balance, { showSymbol: false })}
                         </button>
                       </div>
                       <div className="bg-background border-border relative border">
@@ -1442,11 +1433,11 @@ export default function VaultDetailPage() {
                           </span>
                         </div>
                         <input
-                          type="number"
-                          placeholder="0"
+                          type="text"
+                          placeholder="Enter amount"
                           value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          className="w-full [appearance:textfield] bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          onChange={(e) => handleAmountChange(e.target.value)}
+                          className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1458,9 +1449,8 @@ export default function VaultDetailPage() {
                         <span className="text-white">
                           {balanceLoading
                             ? "Loading..."
-                            : `${balance.toFixed(4)} ${tokenSymbol}`}
+                            : formatUSDC(balance, { showSymbol: true })}
                         </span>
-                        <UsdcIconSvg width={16} height={16} />
                       </div>
                     </div>
 
@@ -1483,9 +1473,10 @@ export default function VaultDetailPage() {
                             : handleWithdraw
                         }
                         disabled={
-                          depositWithdrawTab === "deposit"
+                          !isAmountValid() ||
+                          (depositWithdrawTab === "deposit"
                             ? depositState.isLoading
-                            : withdrawState.isLoading
+                            : withdrawState.isLoading)
                         }
                         className={`w-full cursor-pointer py-3 text-sm font-medium ${
                           depositWithdrawTab === "deposit"
@@ -1509,6 +1500,15 @@ export default function VaultDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Transaction Success Modal */}
+      <TransactionSuccessModal
+        isOpen={successModal.isOpen}
+        onClose={closeSuccessModal}
+        txSignature={successModal.txSignature || ""}
+        transactionType={successModal.transactionType || "deposit"}
+        amount={successModal.amount || 0}
+      />
     </div>
   );
 }

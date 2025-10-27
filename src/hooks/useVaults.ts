@@ -38,10 +38,8 @@ export const useVaults = () => {
         const transformedVaults: VaultWithMetrics[] = response.results.map(
           (vault: Vault) => ({
             ...vault,
-            // Calculate age based on creation date
-            age: vault.created_at
-              ? `${Math.floor((Date.now() - new Date(vault.created_at).getTime()) / (1000 * 60 * 60 * 24))} days`
-              : "N/A",
+            // Age calculation removed - created_at field not available in backend
+            age: "N/A",
             // Determine manager type based on manager KYB status or vault type
             managerType: vault.manager?.is_kyb || vault.vault_type === "banker" ? "verified" : "ecosystem",
           })
@@ -49,16 +47,9 @@ export const useVaults = () => {
 
         setVaults(transformedVaults);
 
-        // Calculate stats
-        const totalTVL = transformedVaults.reduce((sum, vault) => {
-          return sum + (Number(vault.total_value_locked) || 0);
-        }, 0);
-
-        const totalPnL = transformedVaults.reduce((sum, vault) => {
-          // Calculate P&L based on monthly performance
-          const pnl = vault.monthly_performance ? Number(vault.monthly_performance) * 10000 : 0;
-          return sum + pnl;
-        }, 0);
+        // Calculate stats - using placeholder values since fields are not available
+        const totalTVL = 0; // TODO: Get from separate API endpoint
+        const totalPnL = 0; // TODO: Calculate from performance data
 
         // Count manager types
         const verifiedCount = transformedVaults.filter(
@@ -102,10 +93,8 @@ export const useVaults = () => {
       if (vault) {
         return {
           ...vault,
-          // Calculate age based on creation date
-          age: vault.created_at
-            ? `${Math.floor((Date.now() - new Date(vault.created_at).getTime()) / (1000 * 60 * 60 * 24))} days`
-            : "N/A",
+          // Age calculation removed - created_at field not available in backend
+          age: "N/A",
           // Determine manager type based on manager KYB status or vault type
           managerType: vault.manager?.is_kyb || vault.vault_type === "banker" ? "verified" : "ecosystem",
         };

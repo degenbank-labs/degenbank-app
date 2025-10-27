@@ -82,7 +82,7 @@ export const useLeaderboard = () => {
           .map((vault, index) => ({
             rank: index + 1,
             manager: vault.manager?.manager_name || `Manager ${index + 1}`,
-            managerFullAddress: vault.manager?.manager_address || `${Math.random().toString(36).substring(2, 15)}...`,
+            managerFullAddress: vault.manager?.wallet_address || `${Math.random().toString(36).substring(2, 15)}...`,
             managerType: Math.random() > 0.5 ? "verified" : "ecosystem",
             totalTVL: Math.random() * 10000000,
             totalPnL: (Math.random() - 0.5) * 1000000,

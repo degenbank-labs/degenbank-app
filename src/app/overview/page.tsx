@@ -21,6 +21,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import Link from "next/link";
+import Image from "next/image";
 import { Swords, Vault } from "lucide-react";
 
 // Dummy data for charts
@@ -51,8 +52,7 @@ const portfolioData = {
       pnlPercentage: 4.69,
       apy: "12.5%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 2,
@@ -64,8 +64,7 @@ const portfolioData = {
       pnlPercentage: 15.23,
       apy: "25.8%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 3,
@@ -77,8 +76,7 @@ const portfolioData = {
       pnlPercentage: -6.02,
       apy: "8.2%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 4,
@@ -90,8 +88,7 @@ const portfolioData = {
       pnlPercentage: 11.58,
       apy: "18.3%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 5,
@@ -103,8 +100,7 @@ const portfolioData = {
       pnlPercentage: -8.09,
       apy: "22.1%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 6,
@@ -116,8 +112,7 @@ const portfolioData = {
       pnlPercentage: 3.91,
       apy: "12.3%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 7,
@@ -129,8 +124,7 @@ const portfolioData = {
       pnlPercentage: 11.2,
       apy: "16.7%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 8,
@@ -142,8 +136,7 @@ const portfolioData = {
       pnlPercentage: -1.96,
       apy: "14.5%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 9,
@@ -155,8 +148,7 @@ const portfolioData = {
       pnlPercentage: 4.97,
       apy: "7.8%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 10,
@@ -168,8 +160,7 @@ const portfolioData = {
       pnlPercentage: -7.36,
       apy: "19.2%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 11,
@@ -181,8 +172,7 @@ const portfolioData = {
       pnlPercentage: 8.76,
       apy: "15.4%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
     {
       id: 12,
@@ -194,8 +184,7 @@ const portfolioData = {
       pnlPercentage: -3.17,
       apy: "13.9%",
       status: "Active",
-      symbol:
-        "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+      symbol: "https://cdn.degenbank.cc/bonk.png",
     },
   ],
 };
@@ -214,8 +203,7 @@ const availableVaults = [
     minDeposit: 1,
     strategy: "Leveraged yield farming on Drift Protocol",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "jup-lp",
@@ -229,8 +217,7 @@ const availableVaults = [
     minDeposit: 250,
     strategy: "Optimized LP positions on Jupiter Exchange",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "kamino-stable",
@@ -244,8 +231,7 @@ const availableVaults = [
     minDeposit: 100,
     strategy: "Conservative lending on Kamino",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "raydium-lp",
@@ -259,8 +245,7 @@ const availableVaults = [
     minDeposit: 0.5,
     strategy: "Automated LP management on Raydium",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "orca-whirlpool",
@@ -274,8 +259,7 @@ const availableVaults = [
     minDeposit: 200,
     strategy: "Concentrated liquidity on Orca Whirlpools",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "marinade-staking",
@@ -289,8 +273,7 @@ const availableVaults = [
     minDeposit: 1,
     strategy: "Liquid staking with Marinade Finance",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "mango-markets",
@@ -304,8 +287,7 @@ const availableVaults = [
     minDeposit: 500,
     strategy: "Leveraged trading on Mango Markets",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "serum-dex",
@@ -319,8 +301,7 @@ const availableVaults = [
     minDeposit: 0.8,
     strategy: "Market making on Serum DEX",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "tulip-protocol",
@@ -334,8 +315,7 @@ const availableVaults = [
     minDeposit: 150,
     strategy: "Yield farming on Tulip Protocol",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "solend-lending",
@@ -349,8 +329,7 @@ const availableVaults = [
     minDeposit: 100,
     strategy: "Optimized lending on Solend",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "francium-leverage",
@@ -364,8 +343,7 @@ const availableVaults = [
     minDeposit: 2,
     strategy: "Leveraged yield farming on Francium",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
   {
     id: "saber-stable",
@@ -379,8 +357,7 @@ const availableVaults = [
     minDeposit: 50,
     strategy: "Stable coin LP on Saber",
     status: "Open",
-    symbol:
-      "https://drift-public.s3.eu-central-1.amazonaws.com/protocols/knighttrade_square.png",
+    symbol: "https://cdn.degenbank.cc/bonk.png",
   },
 ];
 
@@ -1362,9 +1339,11 @@ export default function OverviewPage() {
                     >
                       <td className="px-1 py-2">
                         <div className="flex items-center space-x-2">
-                          <img
+                          <Image
                             src={position.symbol}
                             alt={position.vault}
+                            width={24}
+                            height={24}
                             className="h-6 w-6 rounded-full object-cover"
                           />
                           <div className="text-xs font-medium text-white">
@@ -1468,9 +1447,11 @@ export default function OverviewPage() {
                     >
                       <td className="px-1 py-2">
                         <div className="flex items-center space-x-2">
-                          <img
+                          <Image
                             src={vault.symbol}
                             alt={vault.name}
+                            width={24}
+                            height={24}
                             className="h-6 w-6 rounded-full object-cover"
                           />
                           <div>

@@ -19,6 +19,7 @@ import CubeLoader from "@/components/ui/cube-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useBattles, type BattleWithMetrics } from "@/hooks/useBattles";
+import { getBattlePhase } from "@/utils/battleStatus";
 
 export default function BattleArenaPage() {
   const router = useRouter();
@@ -39,19 +40,21 @@ export default function BattleArenaPage() {
     refreshBattles,
   } = useBattles();
 
-  // Filter arenas based on active tab
+  // Filter arenas based on active tab using timestamp-based logic
   const getFilteredArenas = (tab: string): BattleWithMetrics[] => {
     switch (tab) {
       case "stake":
         return allArenas.filter(
-          (arena) => arena.current_phase === "Stake Phase"
+          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Stake Phase"
         );
       case "battle":
         return allArenas.filter(
-          (arena) => arena.current_phase === "Battle Phase"
+          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
         );
       case "completed":
-        return allArenas.filter((arena) => arena.current_phase === "Completed");
+        return allArenas.filter(
+          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Completed"
+        );
       default:
         return allArenas;
     }
@@ -70,10 +73,10 @@ export default function BattleArenaPage() {
 
   const gridSize = calculateGridSize(arenas.length);
 
-  // Calculate real-time stats
+  // Calculate real-time stats using timestamp-based logic
   const calculateStats = () => {
     const activeBattles = allArenas.filter(
-      (arena) => arena.current_phase === "Battle Phase"
+      (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
     ).length;
     const totalPrizes = allArenas.reduce(
       (sum, arena) => sum + (arena.prize_pool || 0),
@@ -380,9 +383,9 @@ export default function BattleArenaPage() {
                           <div className="mb-4 flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className={`${getStatusColor(currentArena.current_phase)} rounded-none`}
+                              className={`${getStatusColor(getBattlePhase(currentArena.battle_start, currentArena.battle_end))} rounded-none`}
                             >
-                              {currentArena.current_phase}
+                              {getBattlePhase(currentArena.battle_start, currentArena.battle_end)}
                             </Badge>
                             <Badge
                               variant="outline"

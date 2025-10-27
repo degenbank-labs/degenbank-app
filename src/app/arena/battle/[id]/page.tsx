@@ -19,37 +19,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 import { useBattleVaults } from "@/hooks/useBattleVaults";
-
-// Helper function to get battle phases based on current phase
-const getBattlePhases = (currentPhase: string, timeRemaining: string) => {
-  const phases = [
-    { name: "Stake Phase", key: "Stake Phase" },
-    { name: "Battle Phase", key: "Battle Phase" },
-    { name: "Completed", key: "Completed" },
-  ];
-
-  return phases.map((phase) => {
-    let status = "pending";
-    let duration = "";
-
-    if (phase.key === currentPhase) {
-      status = "active";
-      duration = timeRemaining;
-    } else if (
-      (phase.key === "Stake Phase" &&
-        (currentPhase === "Battle Phase" || currentPhase === "Completed")) ||
-      (phase.key === "Battle Phase" && currentPhase === "Completed")
-    ) {
-      status = "completed";
-      duration = "Completed";
-    } else {
-      status = "pending";
-      duration = "Pending";
-    }
-
-    return { ...phase, status, duration };
-  });
-};
+import { getBattlePhases, getBattlePhase } from "@/utils/battleStatus";
 
 export default function BattleDetailPage() {
   const params = useParams();
@@ -103,11 +73,11 @@ export default function BattleDetailPage() {
     return () => clearInterval(interval);
   }, [battle, battleId, getBattleById]);
 
-  // Get dynamic battle phases
+  // Get dynamic battle phases based on timestamps
   const battlePhases = battle
     ? getBattlePhases(
-        battle.current_phase,
-        battle.timeRemaining || "Loading..."
+        battle.battle_start,
+        battle.battle_end
       )
     : [];
 
@@ -235,7 +205,7 @@ export default function BattleDetailPage() {
                   className="border-primary text-primary rounded-none px-4 py-2"
                 >
                   {battle?.arena_type || "DCA Arena"} -{" "}
-                  {battle?.current_phase || "Phase #1"}
+                  {battle ? getBattlePhase(battle.battle_start, battle.battle_end) : "Phase #1"}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -338,13 +308,13 @@ export default function BattleDetailPage() {
                             </p>
                             <p
                               className={`text-lg font-bold ${
-                                (vault.current_roi || 0) > 0
+                                (vault.apy || 0) > 0
                                   ? "text-green-400"
                                   : "text-red-400"
                               }`}
                             >
-                              {(vault.current_roi || 0) > 0 ? "+" : ""}
-                              {(vault.current_roi || 0).toFixed(1)}%
+                              {(vault.apy || 0) > 0 ? "+" : ""}
+                              {(vault.apy || 0).toFixed(1)}%
                             </p>
                           </div>
                           <div>
@@ -356,11 +326,8 @@ export default function BattleDetailPage() {
                           <div>
                             <p className="mb-1 text-xs text-white/60">TVL</p>
                             <p className="text-lg font-bold text-white">
-                              $
-                              {((vault.total_value_locked || 0) / 1000).toFixed(
-                                0
-                              )}
-                              K
+                              {/* TODO: Replace with actual TVL from backend */}
+                              $ 0K
                             </p>
                           </div>
                           <div>
@@ -369,7 +336,8 @@ export default function BattleDetailPage() {
                             </p>
                             <p className="flex items-center text-lg font-bold text-white">
                               <UsersIcon className="mr-1 h-4 w-4" />
-                              {vault.participants_count || 0}
+                              {/* TODO: Replace with actual participants count from backend */}
+                              0
                             </p>
                           </div>
                         </div>
@@ -378,14 +346,14 @@ export default function BattleDetailPage() {
                           <div className="mb-1 flex justify-between text-xs text-white/60">
                             <span>Performance Progress</span>
                             <span>
-                              {(vault.current_roi || 0) > 0 ? "+" : ""}
-                              {(vault.current_roi || 0).toFixed(1)}%
+                              {(vault.apy || 0) > 0 ? "+" : ""}
+                              {(vault.apy || 0).toFixed(1)}%
                             </span>
                           </div>
                           <Progress
                             value={Math.max(
                               0,
-                              Math.min(100, ((vault.current_roi || 0) + 10) * 5)
+                              Math.min(100, ((vault.apy || 0) + 10) * 5)
                             )}
                             className="h-2"
                           />
@@ -429,15 +397,8 @@ export default function BattleDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-white/60">Total TVL</span>
                       <span className="font-bold text-white">
-                        $
-                        {(
-                          battleVaults.reduce(
-                            (sum, vault) =>
-                              sum + (vault.total_value_locked || 0),
-                            0
-                          ) / 1000
-                        ).toFixed(0)}
-                        K
+                        {/* TODO: Replace with actual total TVL from backend */}
+                        $ 0K
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -449,10 +410,8 @@ export default function BattleDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-white/60">Total Stakers</span>
                       <span className="font-bold text-white">
-                        {battleVaults.reduce(
-                          (sum, vault) => sum + (vault.participants_count || 0),
-                          0
-                        )}
+                        {/* TODO: Replace with actual total participants from backend */}
+                        0
                       </span>
                     </div>
                     <div className="flex justify-between border-t border-white/20 pt-3">

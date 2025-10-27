@@ -10,11 +10,14 @@ import {
   EyeIcon,
   ExclamationTriangleIcon,
   FireIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import Image from "next/image";
 import Particles from "@/components/ui/particles";
 import { ChartArea, VaultIcon, Loader2 } from "lucide-react";
-import { useVaults } from "@/hooks/useVaults";
+import { useVaults, VaultWithMetrics } from "@/hooks/useVaults";
+import { getVaultStatus, getStatusBadgeClass } from "@/utils/battleStatus";
 
 export default function StrategyVaultsPage() {
   const { vaults, stats, loading, error, refreshVaults } = useVaults();
@@ -32,12 +35,6 @@ export default function StrategyVaultsPage() {
     return `$${numericAmount.toFixed(0)}`;
   };
 
-  const formatPercentage = (percentage: number | null | undefined) => {
-    // Convert to number and handle null/undefined/invalid values
-    const numericPercentage = Number(percentage) || 0;
-    return `${numericPercentage >= 0 ? "+" : ""}${numericPercentage.toFixed(2)}%`;
-  };
-
   const formatAPY = (apy: number | null | undefined) => {
     // Convert to number and handle null/undefined/invalid values
     const numericAPY = Number(apy) || 0;
@@ -45,35 +42,59 @@ export default function StrategyVaultsPage() {
   };
 
   const getBattleStatusBadge = (
-    battleStatus?: string,
-    isDisqualified?: boolean
+    vault: VaultWithMetrics
   ) => {
-    if (isDisqualified) {
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-loss/10 text-loss hover:bg-loss/20 rounded-none border-none"
-        >
-          <ExclamationTriangleIcon className="mr-1 h-3 w-3" />
-          Disqualified
-        </Badge>
-      );
-    }
+    // TODO: Replace with actual battle_status check from backend
+    // if (vault.battle_status === 'disqualified') {
+    //   return (
+    //     <Badge
+    //       variant="secondary"
+    //       className="bg-loss/10 text-loss hover:bg-loss/20 rounded-none border-none"
+    //     >
+    //       <ExclamationTriangleIcon className="mr-1 h-3 w-3" />
+    //       Disqualified
+    //     </Badge>
+    //   );
+    // }
 
-    switch (battleStatus) {
-      case "active":
+    // Only show status badge if vault has battle association (locked_start and locked_end)
+    if (vault.locked_start && vault.locked_end) {
+      const status = getVaultStatus(vault.locked_start, vault.locked_end);
+      
+      if (status === "In Battle") {
         return (
           <Badge
             variant="secondary"
-            className="rounded-none border-none bg-purple-500/10 text-purple-500 hover:bg-purple-500/20"
+            className={`rounded-none border-none ${getStatusBadgeClass(status)}`}
           >
             <FireIcon className="mr-1 h-3 w-3" />
-            In Battle
+            {status}
           </Badge>
         );
-      default:
-        return null;
+      } else if (status === "Stake Phase") {
+        return (
+          <Badge
+            variant="secondary"
+            className={`rounded-none border-none ${getStatusBadgeClass(status)}`}
+          >
+            <ClockIcon className="mr-1 h-3 w-3" />
+            {status}
+          </Badge>
+        );
+      } else if (status === "Completed") {
+        return (
+          <Badge
+            variant="secondary"
+            className={`rounded-none border-none ${getStatusBadgeClass(status)}`}
+          >
+            <TrophyIcon className="mr-1 h-3 w-3" />
+            {status}
+          </Badge>
+        );
+      }
     }
+
+    return null;
   };
 
   // Show all vaults without filtering
@@ -261,18 +282,17 @@ export default function StrategyVaultsPage() {
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3">
-                    <img
+                    <Image
                       src={vault.vault_image || "/placeholder.svg"}
                       alt={`${vault.vault_name} symbol`}
+                      width={32}
+                      height={32}
                       className="h-8 w-8 rounded-full"
                     />
                     <div className="space-y-2">
                       <CardTitle className="text-lg">{vault.vault_name}</CardTitle>
                       <div className="flex flex-wrap items-center gap-2">
-                        {getBattleStatusBadge(
-                          vault.battle_status,
-                          vault.is_disqualified
-                        )}
+                        {getBattleStatusBadge(vault)}
                       </div>
                     </div>
                   </div>
@@ -289,7 +309,8 @@ export default function StrategyVaultsPage() {
                   <div>
                     <div className="text-muted-foreground text-sm">TVL</div>
                     <div className="text-primary text-lg font-bold">
-                      {formatCurrency(vault.total_value_locked)}
+                      {/* TODO: Replace with actual TVL from backend */}
+                      $ 0.0M
                     </div>
                   </div>
                 </div>
@@ -302,38 +323,23 @@ export default function StrategyVaultsPage() {
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="text-center">
                       <div className="text-muted-foreground">1D</div>
-                      <div
-                        className={`font-bold ${
-                          Number(vault.daily_performance) >= 0
-                            ? "text-profit"
-                            : "text-loss"
-                        }`}
-                      >
-                        {formatPercentage(vault.daily_performance)}
+                      <div className="font-bold text-muted-foreground">
+                        {/* TODO: Replace with actual daily performance from backend */}
+                        N/A
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">7D</div>
-                      <div
-                        className={`font-bold ${
-                          Number(vault.weekly_performance) >= 0
-                            ? "text-profit"
-                            : "text-loss"
-                        }`}
-                      >
-                        {formatPercentage(vault.weekly_performance)}
+                      <div className="font-bold text-muted-foreground">
+                        {/* TODO: Replace with actual weekly performance from backend */}
+                        N/A
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-muted-foreground">30D</div>
-                      <div
-                        className={`font-bold ${
-                          Number(vault.monthly_performance) >= 0
-                            ? "text-profit"
-                            : "text-loss"
-                        }`}
-                      >
-                        {formatPercentage(vault.monthly_performance)}
+                      <div className="font-bold text-muted-foreground">
+                        {/* TODO: Replace with actual monthly performance from backend */}
+                        N/A
                       </div>
                     </div>
                   </div>

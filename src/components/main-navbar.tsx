@@ -24,6 +24,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
+import { formatUSDC } from "@/lib/utils";
 
 export function MainNavbar() {
   const {
@@ -260,7 +261,7 @@ export function MainNavbar() {
                         {balanceLoading ? (
                           "Loading..."
                         ) : (
-                          `${balance.toFixed(4)} ${tokenSymbol}`
+                          formatUSDC(balance, { showSymbol: true })
                         )}
                       </span>
                     </div>

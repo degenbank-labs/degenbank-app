@@ -7,6 +7,7 @@ interface UsdcIconProps extends React.SVGProps<SVGSVGElement> {
 
 const UsdcIcon: React.FC<UsdcIconProps> = (props) => (
   <svg
+    {...props}
     data-name="86977684-12db-4850-8f30-233a7c267d11"
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 2000 2000"

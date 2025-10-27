@@ -29,8 +29,8 @@ export const useBattleVaults = (battleId: string) => {
         color: ['#6fb7a5', '#FB605C', '#FFB800', '#9333EA'][index % 4],
       }));
 
-      // Sort by performance (current_roi) descending
-      transformedVaults.sort((a, b) => (b.current_roi || 0) - (a.current_roi || 0));
+      // Sort by APY descending
+      transformedVaults.sort((a, b) => (b.apy || 0) - (a.apy || 0));
 
       setVaults(transformedVaults);
     } catch (err) {

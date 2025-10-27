@@ -60,9 +60,9 @@ export function useBattles() {
             // Only add computed frontend fields
             timeRemaining: calculateTimeRemaining(battle.battle_end),
             // Calculate from vaults data or use defaults if no vaults
-            totalTVL: battle.vaults?.reduce((sum, vault) => sum + (vault.total_value_locked || 0), 0) || 0,
+            totalTVL: 0, // TODO: Get from separate API endpoint
             activeVaults: battle.vaults?.length || 0,
-            participants: battle.vaults?.reduce((sum, vault) => sum + (vault.participants_count || 0), 0) || 0,
+            participants: 0, // TODO: Get from separate API endpoint
             cubePosition: {
               row: Math.floor(index / 2),
               col: index % 2,
@@ -116,9 +116,9 @@ export function useBattles() {
           // Only add computed frontend fields
           timeRemaining: calculateTimeRemaining(battle.battle_end),
           // Calculate from vaults data or use defaults if no vaults
-          totalTVL: battle.vaults?.reduce((sum, vault) => sum + (vault.total_value_locked || 0), 0) || 0,
+          totalTVL: 0, // TODO: Get from separate API endpoint
           activeVaults: battle.vaults?.length || 0,
-          participants: battle.vaults?.reduce((sum, vault) => sum + (vault.participants_count || 0), 0) || 0,
+          participants: 0, // TODO: Get from separate API endpoint
           cubePosition: { row: 0, col: 0 },
         };
       }

@@ -11,6 +11,7 @@ import {
   SystemProgram,
   Keypair,
 } from "@solana/web3.js";
+import bs58 from "bs58";
 import {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
@@ -71,6 +72,13 @@ interface VaultOperationResult {
   error?: string;
 }
 
+interface SuccessModalState {
+  isOpen: boolean;
+  txSignature: string | null;
+  transactionType: "deposit" | "withdraw" | null;
+  amount: number | null;
+}
+
 export const useVaultOperations = () => {
   const { authenticated, user: privyUser } = usePrivy();
   const { wallets } = useWallets();
@@ -84,6 +92,36 @@ export const useVaultOperations = () => {
     error: null,
     txSignature: null,
   });
+  const [successModal, setSuccessModal] = useState<SuccessModalState>({
+    isOpen: false,
+    txSignature: null,
+    transactionType: null,
+    amount: null,
+  });
+
+  // Function to show success modal
+  const showSuccessModal = useCallback((
+    txSignature: string,
+    transactionType: "deposit" | "withdraw",
+    amount: number
+  ) => {
+    setSuccessModal({
+      isOpen: true,
+      txSignature,
+      transactionType,
+      amount,
+    });
+  }, []);
+
+  // Function to close success modal
+  const closeSuccessModal = useCallback(() => {
+    setSuccessModal({
+      isOpen: false,
+      txSignature: null,
+      transactionType: null,
+      amount: null,
+    });
+  }, []);
 
   // fake anchor provider
   const provider = useMemo(() => {
@@ -325,10 +363,17 @@ export const useVaultOperations = () => {
       if (!selectedWallet.signAndSendTransaction) {
         throw new Error("Wallet does not support transaction signing");
       }
-      transaction.feePayer = new PublicKey(selectedWallet.address);
-      transaction.recentBlockhash = (
-        await connection.getLatestBlockhash()
-      ).blockhash;
+
+      // Only set fee payer and recent blockhash if not already set
+      if (!transaction.feePayer) {
+        transaction.feePayer = new PublicKey(selectedWallet.address);
+      }
+      
+      if (!transaction.recentBlockhash) {
+        transaction.recentBlockhash = (
+          await connection.getLatestBlockhash()
+        ).blockhash;
+      }
 
       const serializedTx = transaction.serialize({
         requireAllSignatures: false,
@@ -345,7 +390,17 @@ export const useVaultOperations = () => {
         throw new Error("Transaction signing failed");
       }
 
-      return signature.toString();
+      // Ensure signature is properly formatted as a base58 string
+      if (typeof signature === "string") {
+        // If it's already a string, assume it's base58 encoded
+        return signature;
+      } else if (signature instanceof Uint8Array) {
+        // Convert Uint8Array to base58 string (Solana standard)
+        return bs58.encode(signature);
+      } else {
+        // Fallback: convert to string and assume it's base58
+        return String(signature);
+      }
     },
     [wallets, privyUser]
   );
@@ -360,13 +415,44 @@ export const useVaultOperations = () => {
       try {
         setDepositState({ isLoading: true, error: null, txSignature: null });
 
+        // Input validation
+        if (!vaultId || vaultId.trim() === "") {
+          throw new Error("Vault ID is required");
+        }
+
+        if (!amount || amount <= 0) {
+          throw new Error("Amount must be greater than 0");
+        }
+
+        if (amount > 1000000) { // Reasonable upper limit
+          throw new Error("Amount is too large");
+        }
+
         const userPubkey = getUserPublicKey();
 
         // Get vault data to retrieve the actual vault address
         const vaultData = await apiService.getVault(vaultId);
 
-        if (!vaultData || !vaultData.vault_address) {
-          throw new Error("Vault not found or vault address is missing");
+        if (!vaultData) {
+          throw new Error("Vault not found");
+        }
+
+        if (!vaultData.vault_address || vaultData.vault_address.trim() === "") {
+          throw new Error("Vault address is missing or invalid");
+        }
+
+        // Note: Vault availability should be checked via battle_status or other backend fields
+
+        // Validate vault_token_mint before creating PublicKey
+        if (!vaultData.vault_token_mint || vaultData.vault_token_mint.trim() === "") {
+          throw new Error("Vault token mint is missing or invalid");
+        }
+
+        let vaultTokenMint: PublicKey;
+        try {
+          vaultTokenMint = new PublicKey(vaultData.vault_token_mint);
+        } catch (error) {
+          throw new Error(`Invalid vault token mint address: ${vaultData.vault_token_mint}`);
         }
 
         // Use vault_address instead of vault_id for PublicKey creation
@@ -376,57 +462,16 @@ export const useVaultOperations = () => {
         // Build transaction
         const transaction = new Transaction();
 
-        // Check if vault token mint exists, if not create it
-        // let vaultTokenMint: PublicKey;
-        // const mintKeypair: Keypair | null = null;
-
-        // console.log("Checking vault token mint...", {
-        //   vaultId: vaultData.vault_id,
-        //   existingMint: vaultData.vault_token_mint,
-        // });
-
-        // if (vaultData.vault_token_mint) {
-        //   // Use existing vault token mint
-        //   try {
-        //     vaultTokenMint = new PublicKey(vaultData.vault_token_mint);
-        //     console.log(
-        //       "Using existing vault token mint:",
-        //       vaultTokenMint.toString()
-        //     );
-
-        //     // Check if the mint actually exists on-chain
-        //     const mintInfo = await connection.getAccountInfo(vaultTokenMint);
-        //     if (!mintInfo) {
-        //       console.log(
-        //         "Mint not found on-chain, will use TOKEN_MINT as fallback"
-        //       );
-        //       // Use TOKEN_MINT as fallback instead of creating new mint
-        //       vaultTokenMint = TOKEN_MINT;
-        //     } else {
-        //       console.log("Mint exists on-chain, using existing mint");
-        //     }
-        //   } catch (error) {
-        //     console.log(
-        //       "Invalid vault token mint address, using TOKEN_MINT as fallback"
-        //     );
-        //     vaultTokenMint = TOKEN_MINT;
-        //   }
-        // } else {
-        //   console.log(
-        //     "No vault token mint in database, using TOKEN_MINT as fallback"
-        //   );
-        //   // Use TOKEN_MINT as fallback instead of creating new mint
-        //   vaultTokenMint = TOKEN_MINT;
-        // }
-
-        const vaultTokenMint = new PublicKey(vaultData.vault_token_mint || "");
-
         // Get battle PDA or use provided address
         let battlePubkey: PublicKey;
         let battleData = null;
 
         if (battleAddress) {
-          battlePubkey = new PublicKey(battleAddress);
+          try {
+            battlePubkey = new PublicKey(battleAddress);
+          } catch (error) {
+            throw new Error(`Invalid battle address: ${battleAddress}`);
+          }
         } else {
           // Try to get battle PDA from vault's battle data
           if (vaultData.battle_id) {
@@ -436,9 +481,6 @@ export const useVaultOperations = () => {
               );
 
               if (battleData && battleData.pda_address) {
-                battlePubkey = new PublicKey(battleData.pda_address);
-              } else if (battleData && battleData.pda_address) {
-                // Fallback to legacy field name
                 battlePubkey = new PublicKey(battleData.pda_address);
               } else {
                 // Use battle owner address from database if available
@@ -450,6 +492,7 @@ export const useVaultOperations = () => {
                 battlePubkey = battlePDA;
               }
             } catch (error) {
+              console.warn("Failed to get battle data, using user PDA:", error);
               const [battlePDA] = await solanaService.getBattlePDA(userPubkey);
               battlePubkey = battlePDA;
             }
@@ -459,14 +502,39 @@ export const useVaultOperations = () => {
           }
         }
 
-        // Get PDAs and token accounts
-        // Try using vault itself as authority first
-        const vtokenAuthority = vaultPubkey;
+        // Validate battle lock period
+        if (battleData) {
+          const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+          
+          // Check if battle has start and end times
+          if (battleData.battle_start && battleData.battle_end) {
+            const battleStart = Math.floor(new Date(battleData.battle_start).getTime() / 1000);
+            const battleEnd = Math.floor(new Date(battleData.battle_end).getTime() / 1000);
+            
+            // Based on smart contract logic, deposits might be locked during specific periods
+            // Let's be more permissive here and let the smart contract handle the validation
+            console.log(`Battle timing - Current: ${currentTime}, Start: ${battleStart}, End: ${battleEnd}`);
+            
+            // Only block if battle has ended (completed)
+            if (currentTime > battleEnd) {
+              console.warn(
+                `Battle has ended. Battle "${battleData.battle_name || 'Unknown'}" ended at ${new Date(battleData.battle_end).toLocaleString()}. Deposits may not be allowed for completed battles.`
+              );
+            }
+            
+            // Check for specific phases that definitely block deposits
+            if (battleData.current_phase === "Completed") {
+              throw new Error(
+                `Deposits are not allowed for completed battles. Current phase: ${battleData.current_phase}.`
+              );
+            }
+          }
+          
+          // Note: battle_status is always 'active' according to the model, so no need to check it
+        }
 
-        // Note: Vault authority PDA might not exist until vault is properly initialized
-        // This is normal for new vaults
-        const vtokenAuthorityInfo =
-          await connection.getAccountInfo(vtokenAuthority);
+        // Get PDAs and token accounts
+        const vtokenAuthority = vaultPubkey;
 
         // Get all required token accounts
         const depositorTokenAccount = await getAssociatedTokenAddress(
@@ -479,11 +547,30 @@ export const useVaultOperations = () => {
           userPubkey
         );
 
-        // const vtokenAccount = vaultTokenMint;
+        // According to IDL, vtoken_account should be the vault token mint itself
+        const vtokenAccount = vaultTokenMint;
 
-        const vaultTokenAccount = new PublicKey(
-          vaultData.vault_token_address || ""
-        );
+        // Validate vault_token_address before creating PublicKey
+        let vaultTokenAccount: PublicKey;
+        if (vaultData.vault_token_address && vaultData.vault_token_address.trim() !== "") {
+          try {
+            vaultTokenAccount = new PublicKey(vaultData.vault_token_address);
+          } catch (error) {
+            // Fallback: create associated token address for vault
+            vaultTokenAccount = await getAssociatedTokenAddress(
+              TOKEN_MINT,
+              vaultPubkey,
+              true
+            );
+          }
+        } else {
+          // Create associated token address for vault
+          vaultTokenAccount = await getAssociatedTokenAddress(
+            TOKEN_MINT,
+            vaultPubkey,
+            true
+          );
+        }
 
         // Validate all required accounts before creating instructions
 
@@ -497,7 +584,7 @@ export const useVaultOperations = () => {
 
         // Check if vault is owned by our program
         if (!vaultAccountInfo.owner.equals(PROGRAM_ID)) {
-          // Vault account is not owned by our program
+          console.warn("Vault account is not owned by our program");
         }
 
         // Validate battle account
@@ -528,84 +615,165 @@ export const useVaultOperations = () => {
           );
         }
 
+        // Validate vault token mint
+        const vaultTokenMintInfo = await connection.getAccountInfo(vaultTokenMint);
+        if (!vaultTokenMintInfo) {
+          throw new Error(
+            `Vault token mint does not exist: ${vaultTokenMint.toString()}`
+          );
+        }
+
         // Check and create depositor token account if needed
-        const depositorTokenAccountInfo = await connection.getAccountInfo(
-          depositorTokenAccount
-        );
-        if (!depositorTokenAccountInfo) {
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              userPubkey,
-              depositorTokenAccount,
-              userPubkey,
-              TOKEN_MINT
-            )
+        try {
+          const depositorTokenAccountInfo = await connection.getAccountInfo(
+            depositorTokenAccount
           );
-        }
+          if (!depositorTokenAccountInfo) {
+            console.log("Creating depositor token account...");
+            transaction.add(
+              createAssociatedTokenAccountInstruction(
+                userPubkey,
+                depositorTokenAccount,
+                userPubkey,
+                TOKEN_MINT
+              )
+            );
+          }
 
-        // Check and create depositor vtoken account if needed
-        const depositorVtokenAccountInfo = await connection.getAccountInfo(
-          depositorVtokenAccount
-        );
-        if (!depositorVtokenAccountInfo) {
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              userPubkey,
-              depositorVtokenAccount,
-              userPubkey,
-              vaultTokenMint
-            )
+          // Check and create depositor vtoken account if needed
+          const depositorVtokenAccountInfo = await connection.getAccountInfo(
+            depositorVtokenAccount
           );
-        }
+          if (!depositorVtokenAccountInfo) {
+            console.log("Creating depositor vtoken account...");
+            transaction.add(
+              createAssociatedTokenAccountInstruction(
+                userPubkey,
+                depositorVtokenAccount,
+                userPubkey,
+                vaultTokenMint
+              )
+            );
+          }
 
-        // Check and create vtoken account if needed
-        // const vtokenAccountInfo =
-        //   await connection.getAccountInfo(vtokenAccount);
-        // if (!vtokenAccountInfo) {
-        //   console.log("Creating vault token account...");
-        //   transaction.add(
-        //     createAssociatedTokenAccountInstruction(
-        //       userPubkey,
-        //       vaultTokenMint,
-        //       vtokenAuthority,
-        //       vaultTokenMint
-        //     )
-        //   );
-        // } else {
-        //   console.log("✓ Vault token account exists");
-        // }
-
-        // Check and create vault token account if needed
-        const vaultTokenAccountInfo =
-          await connection.getAccountInfo(vaultTokenAccount);
-        if (!vaultTokenAccountInfo) {
-          transaction.add(
-            createAssociatedTokenAccountInstruction(
-              userPubkey,
-              vaultTokenAccount,
-              vaultPubkey,
-              TOKEN_MINT
-            )
+          // Check and create vault token account if needed
+          const vaultTokenAccountInfo =
+            await connection.getAccountInfo(vaultTokenAccount);
+          if (!vaultTokenAccountInfo) {
+            console.log("Creating vault token account...");
+            transaction.add(
+              createAssociatedTokenAccountInstruction(
+                userPubkey,
+                vaultTokenAccount,
+                vaultPubkey,
+                TOKEN_MINT
+              )
+            );
+          }
+        } catch (error) {
+          throw new Error(
+            `Failed to check or create token accounts: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
           );
         }
 
         // Add deposit instruction
-        const depositIx = await createDepositInstruction(
-          vaultPubkey,
-          battlePubkey,
-          userPubkey,
-          amountBigInt,
-          vaultTokenMint
-        );
+        let depositIx: TransactionInstruction;
+        try {
+          const instruction = await createDepositInstruction(
+            vaultPubkey,
+            battlePubkey,
+            userPubkey,
+            amountBigInt,
+            vaultTokenMint
+          );
 
-        if (depositIx) {
+          if (!instruction) {
+            throw new Error("Deposit instruction creation returned null");
+          }
+
+          depositIx = instruction;
           transaction.add(depositIx);
-        } else {
-          throw new Error("Failed to create deposit instruction");
+        } catch (error) {
+          throw new Error(
+            `Failed to create deposit instruction: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
         }
 
-        // Send transaction (no additional signers needed since we're using existing mints)
-        const signature = await sendTransaction(transaction, []);
+        // Send transaction with proper error handling
+        let signature: string;
+        try {
+          console.log("Preparing transaction for sending...");
+          
+          // Set fee payer and recent blockhash for simulation
+          if (!privyUser || !wallets.length) {
+            throw new Error("Wallet not connected for transaction");
+          }
+          
+          const selectedWallet = wallets[0];
+          transaction.feePayer = new PublicKey(selectedWallet.address);
+          transaction.recentBlockhash = (
+            await connection.getLatestBlockhash()
+          ).blockhash;
+
+          // Simulate transaction before sending (best practice)
+          try {
+            console.log("Simulating transaction...");
+            const simulationResult = await connection.simulateTransaction(transaction);
+            
+            if (simulationResult.value.err) {
+              throw new Error(
+                `Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`
+              );
+            }
+            
+            console.log("Transaction simulation successful");
+          } catch (error) {
+            throw new Error(
+              `Transaction simulation error: ${
+                error instanceof Error ? error.message : "Unknown simulation error"
+              }`
+            );
+          }
+
+          console.log("Sending transaction...");
+          signature = await sendTransaction(transaction, []);
+          
+          if (!signature) {
+            throw new Error("Transaction signature is null or undefined");
+          }
+          
+          console.log("Transaction sent successfully:", signature);
+        } catch (error) {
+          // Provide specific error messages for common Solana errors
+          let errorMessage = "Transaction failed";
+          
+          if (error instanceof Error) {
+            const errorStr = error.message.toLowerCase();
+            
+            if (errorStr.includes("insufficient funds")) {
+              errorMessage = "Insufficient funds for transaction";
+            } else if (errorStr.includes("blockhash not found")) {
+              errorMessage = "Transaction expired, please try again";
+            } else if (errorStr.includes("account not found")) {
+              errorMessage = "Required account not found on-chain";
+            } else if (errorStr.includes("user rejected")) {
+              errorMessage = "Transaction was rejected by user";
+            } else if (errorStr.includes("timeout")) {
+              errorMessage = "Transaction timed out, please try again";
+            } else if (errorStr.includes('"custom":6004') || errorStr.includes('{"custom":6004}')) {
+              // Handle OnLockPeriod error (Custom:6004)
+              errorMessage = "Deposits are currently locked. The battle is in progress and deposits are not allowed during this period. Please wait until the battle ends to make deposits.";
+            } else {
+              errorMessage = `Transaction failed: ${error.message}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
+        }
 
         setDepositState({
           isLoading: false,
@@ -613,11 +781,31 @@ export const useVaultOperations = () => {
           txSignature: signature,
         });
 
-        toast.success("Deposit successful!");
+        // Show success modal instead of toast
+        showSuccessModal(signature, "deposit", amount);
         return { success: true, signature };
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Deposit failed";
+        console.error("Deposit error details:", error);
+        
+        let errorMessage = "Deposit failed";
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          
+          // Provide more user-friendly messages for specific error patterns
+          if (errorMessage.includes('"Custom":6004') || errorMessage.includes('{"Custom":6004}')) {
+            errorMessage = "🔒 Deposits are currently locked during the battle period. Please wait until the battle ends to make deposits.";
+          } else if (errorMessage.includes('OnLockPeriod')) {
+            errorMessage = "🔒 The battle is in a lock period. Deposits are temporarily disabled until the battle phase completes.";
+          } else if (errorMessage.includes('Transaction simulation failed')) {
+            errorMessage = "❌ Transaction validation failed. This might be due to timing restrictions or insufficient permissions.";
+          }
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else if (error && typeof error === "object" && "message" in error) {
+          errorMessage = String(error.message);
+        }
+
         setDepositState({
           isLoading: false,
           error: errorMessage,
@@ -689,7 +877,8 @@ export const useVaultOperations = () => {
           txSignature: signature,
         });
 
-        toast.success("Withdrawal successful!");
+        // Show success modal instead of toast
+        showSuccessModal(signature, "withdraw", amount);
         return { success: true, signature };
       } catch (error) {
         const errorMessage =
@@ -712,6 +901,8 @@ export const useVaultOperations = () => {
     withdraw,
     depositState,
     withdrawState,
+    successModal,
+    closeSuccessModal,
     isConnected: authenticated && !!getWalletAddress(),
   };
 };

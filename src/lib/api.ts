@@ -40,7 +40,7 @@ export interface UpdateUserRequest {
   image?: string;
 }
 
-// Vault interfaces
+// Vault interfaces - matching backend model exactly
 export interface Vault {
   vault_id: string;
   vault_type: string;
@@ -49,32 +49,22 @@ export interface Vault {
   vault_address: string;
   token_program: string;
   token_address: string;
-  vault_token_address?: string;
-  vault_token_mint?: string;
-  locked_start: string;
-  locked_end: string;
+  vault_token_address: string;
+  vault_token_mint: string;
+  locked_start: string; // Date as ISO string from API
+  locked_end: string; // Date as ISO string from API
   vault_strategy: string;
   vault_risks: string;
   description: string;
   manager_id: string;
   battle_id: number | null;
-  created_at: string;
-  is_available: boolean;
-  // New arena/battle fields
-  current_roi?: number;
-  daily_performance?: number;
-  weekly_performance?: number;
-  monthly_performance?: number;
-  total_value_locked?: number;
-  share_price?: number;
-  participants_count?: number;
-  battle_status?: string;
-  is_disqualified?: boolean;
-  last_performance_update?: string;
-  risk_level?: 'Low' | 'Medium' | 'High';
-  apy?: number;
-  deposit_asset?: string;
-  min_deposit?: number;
+  battle_status: string;
+  last_performance_update: string; // Date as ISO string from API
+  risk_level: string;
+  apy: number;
+  deposit_asset: string;
+  min_deposit: number;
+  // Relations
   manager?: Manager;
   battle?: Battle;
 }
@@ -103,36 +93,7 @@ export interface VaultPerformanceResponse {
   };
 }
 
-export interface VaultPerformanceUpdate {
-  current_roi?: number;
-  daily_performance?: number;
-  weekly_performance?: number;
-  monthly_performance?: number;
-  total_value_locked?: number;
-  share_price?: number;
-  participants_count?: number;
-}
-
-// Helper function to generate dummy performance data
-export const generateDummyVaultData = (vault: Vault): Vault => {
-  const baseROI = Math.random() * 30 - 5; // Random ROI between -5% and 25%
-  const baseTVL = Math.floor(Math.random() * 10000000) + 100000; // Random TVL between 100k and 10M
-  
-  return {
-    ...vault,
-    current_roi: baseROI,
-    daily_performance: baseROI * 0.1 + (Math.random() * 2 - 1), // Daily variation
-    weekly_performance: baseROI * 0.5 + (Math.random() * 5 - 2.5), // Weekly variation
-    monthly_performance: baseROI + (Math.random() * 10 - 5), // Monthly variation
-    total_value_locked: baseTVL,
-    share_price: 1 + (baseROI / 100),
-    participants_count: Math.floor(Math.random() * 500) + 10, // 10-510 participants
-    apy: Math.max(0, baseROI + Math.random() * 10), // APY slightly higher than ROI
-    risk_level: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)] as 'Low' | 'Medium' | 'High',
-    deposit_asset: ['SOL', 'USDC', 'USDT', 'ETH'][Math.floor(Math.random() * 4)],
-    min_deposit: [50, 100, 250, 500, 1000][Math.floor(Math.random() * 5)],
-  };
-};
+// Note: Performance data should come from backend API, not generated client-side
 
 // Battle interfaces - Updated to match backend model exactly
 export interface Battle {
@@ -146,7 +107,6 @@ export interface Battle {
   treasury_address: string;
   owner_address: string;
   pda_address: string;
-  is_available: boolean;
   arena_type: 'DCA Strategy' | 'Lending Strategy' | 'Mixed Strategy' | 'Yield Farming';
   current_phase: 'Registration' | 'Stake Phase' | 'Battle Phase' | 'Resolution Phase' | 'Completed';
   prize_pool: number; // bigint from backend converted to number
@@ -165,11 +125,10 @@ export interface GetBattlesResponse {
 export interface Manager {
   manager_id: string;
   manager_name: string;
-  manager_image: string;
-  manager_address: string;
-  manager_description: string;
+  wallet_address: string;
+  manager_token_address: string;
+  image: string;
   is_kyb: boolean;
-  created_at: string;
 }
 
 export interface GetManagersResponse {
@@ -301,36 +260,21 @@ class ApiService {
   // Vault API methods
   async getVault(id: string): Promise<Vault> {
     const response = await this.request<Vault>(`/vault/${id}`);
-    // Add dummy performance data for missing fields
-    return generateDummyVaultData(response.data);
+    return response.data;
   }
 
   async getAllVaults(skip: number = 0, limit: number = 10): Promise<GetVaultsResponse> {
     const response = await this.request<GetVaultsResponse>(`/vault?skip=${skip}&limit=${limit}`);
-    // Add dummy performance data for all vaults
-    const vaultsWithDummyData = response.data.results.map(vault => generateDummyVaultData(vault));
-    return {
-      ...response.data,
-      results: vaultsWithDummyData
-    };
+    return response.data;
   }
 
   async getVaultsByBattleId(battleId: number): Promise<Vault[]> {
     const response = await this.request<Vault[]>(`/vault/battle/${battleId}`);
-    // Add dummy performance data for battle vaults
-    return response.data.map(vault => generateDummyVaultData(vault));
+    return response.data;
   }
 
   async getVaultPerformance(vaultId: string, period: string = '14D'): Promise<VaultPerformanceResponse> {
     const response = await this.request<VaultPerformanceResponse>(`/vault/${vaultId}/performance?period=${period}`);
-    return response.data;
-  }
-
-  async updateVaultPerformance(vaultId: string, performanceData: VaultPerformanceUpdate): Promise<Vault> {
-    const response = await this.request<Vault>(`/vault/${vaultId}/performance`, {
-      method: 'PUT',
-      body: JSON.stringify(performanceData),
-    });
     return response.data;
   }
 
