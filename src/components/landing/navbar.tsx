@@ -61,18 +61,22 @@ export function Navbar() {
                 >
                   How It Works
                 </button>
-                <button
-                  onClick={() => scrollToSection("vault")}
-                  className="cursor-pointer text-sm font-medium tracking-wide text-white/90 transition-all duration-300 hover:scale-105 hover:text-white"
-                >
-                  Vault
-                </button>
-                <button
-                  onClick={() => handleExternalLink("#")}
-                  className="cursor-pointer text-sm font-medium tracking-wide text-white/90 transition-all duration-300 hover:scale-105 hover:text-white"
-                >
-                  Whitepaper
-                </button>
+                <Link href="/vaults/strategy-vaults">
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="cursor-pointer text-sm font-medium tracking-wide text-white/90 transition-all duration-300 hover:scale-105 hover:text-white"
+                  >
+                    Vault
+                  </button>
+                </Link>
+                <Link href="/arena/battle">
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="cursor-pointer text-sm font-medium tracking-wide text-white/90 transition-all duration-300 hover:scale-105 hover:text-white"
+                  >
+                    Arena
+                  </button>
+                </Link>
               </div>
             </div>
 
@@ -129,18 +133,22 @@ export function Navbar() {
             >
               How It Works
             </button>
-            <button
-              onClick={() => scrollToSection("vault")}
-              className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              Vault
-            </button>
-            <button
-              onClick={() => handleExternalLink("#")}
-              className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              Whitepaper
-            </button>
+            <Link href="/vaults/strategy-vaults">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white w-full"
+              >
+                Vault
+              </button>
+            </Link>
+            <Link href="/arena/battle">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="rounded-md px-3 py-3 text-left text-base font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white w-full"
+              >
+                Arena
+              </button>
+            </Link>
 
             {/* Mobile Login/Overview Button */}
             <div className="border-t border-white/10 pt-2">

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { MessageCircle, Twitter } from "lucide-react";
 import { Button } from "../ui/button";
+import Link from "next/link";
 
 export function Footer() {
   const scrollToSection = (sectionId: string) => {
@@ -65,18 +66,16 @@ export function Footer() {
               >
                 How It Works
               </button>
-              <button
-                onClick={() => scrollToSection("vault")}
-                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
-              >
-                Vault
-              </button>
-              <button
-                onClick={() => handleExternalLink("#")}
-                className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black"
-              >
-                Whitepaper
-              </button>
+              <Link href="/vaults/strategy-vaults">
+                <button className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black">
+                  Vault
+                </button>
+              </Link>
+              <Link href="/arena/battle">
+                <button className="cursor-pointer text-left text-base text-black/80 transition-colors hover:text-black">
+                  Arena
+                </button>
+              </Link>
             </div>
           </div>
 
