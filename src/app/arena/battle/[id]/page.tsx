@@ -9,14 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  TrophyIcon,
-  ChartBarIcon,
   ClockIcon,
   UsersIcon,
   ShieldCheckIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { Loader2 } from "lucide-react";
+import { Loader2, Swords } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 import { useBattleVaults } from "@/hooks/useBattleVaults";
 import { getBattlePhases, getBattlePhase } from "@/utils/battleStatus";
@@ -75,15 +73,14 @@ export default function BattleDetailPage() {
 
   // Get dynamic battle phases based on timestamps
   const battlePhases = battle
-    ? getBattlePhases(
-        battle.battle_start,
-        battle.battle_end
-      )
+    ? getBattlePhases(battle.battle_start, battle.battle_end)
     : [];
 
   // Handle Enter Battle navigation
   const handleEnterBattle = (vaultId: string) => {
-    router.push(`/vaults/strategy-vaults/${vaultId}?from=battle&battleId=${battleId}`);
+    router.push(
+      `/vaults/strategy-vaults/${vaultId}?from=battle&battleId=${battleId}`
+    );
   };
 
   // Sort vaults by performance for leaderboard (already sorted in hook)
@@ -205,7 +202,9 @@ export default function BattleDetailPage() {
                   className="border-primary text-primary rounded-none px-4 py-2"
                 >
                   {battle?.arena_type || "DCA Arena"} -{" "}
-                  {battle ? getBattlePhase(battle.battle_start, battle.battle_end) : "Phase #1"}
+                  {battle
+                    ? getBattlePhase(battle.battle_start, battle.battle_end)
+                    : "Phase #1"}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -256,7 +255,7 @@ export default function BattleDetailPage() {
               <div className="space-y-6 lg:col-span-2">
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="font-cirka flex items-center text-2xl font-bold text-white md:text-3xl">
-                    <TrophyIcon className="text-primary mr-3 h-8 w-8" />
+                    <Swords className="text-primary mr-3 h-8 w-8" />
                     <span className="text-white">Vault Battle Leaderboard</span>
                   </h2>
                   <Badge
@@ -387,7 +386,6 @@ export default function BattleDetailPage() {
                 <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white">
-                      <ChartBarIcon className="text-primary mr-2 h-5 w-5" />
                       <span className="font-bold text-white">
                         Arena Statistics
                       </span>

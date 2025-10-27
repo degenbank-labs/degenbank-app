@@ -295,15 +295,19 @@ const Cubes: React.FC<CubesProps> = ({
   };
 
   // Generate positions only for arenas that have data
-  const getArenaPositions = (): Array<{ row: number; col: number; arena: ArenaData }> => {
+  const getArenaPositions = (): Array<{
+    row: number;
+    col: number;
+    arena: ArenaData;
+  }> => {
     return arenaData.map((arena, index) => {
       // Calculate centered position based on index and gridSize
       const totalCubes = arenaData.length;
       const actualGridSize = Math.ceil(Math.sqrt(totalCubes));
-      
+
       // For better centering, especially with fewer cubes
       let row: number, col: number;
-      
+
       if (totalCubes === 1) {
         // Single cube in center
         row = Math.floor(gridSize / 2);
@@ -311,17 +315,23 @@ const Cubes: React.FC<CubesProps> = ({
       } else if (totalCubes <= 4) {
         // 2x2 grid centered
         const positions = [
-          { row: Math.floor(gridSize / 2) - 1, col: Math.floor(gridSize / 2) - 1 },
+          {
+            row: Math.floor(gridSize / 2) - 1,
+            col: Math.floor(gridSize / 2) - 1,
+          },
           { row: Math.floor(gridSize / 2) - 1, col: Math.floor(gridSize / 2) },
           { row: Math.floor(gridSize / 2), col: Math.floor(gridSize / 2) - 1 },
-          { row: Math.floor(gridSize / 2), col: Math.floor(gridSize / 2) }
+          { row: Math.floor(gridSize / 2), col: Math.floor(gridSize / 2) },
         ];
         const pos = positions[index] || positions[0];
         row = pos.row;
         col = pos.col;
       } else {
         // Use arena's cubePosition if available, otherwise calculate based on index
-        if (arena.cubePosition?.row !== undefined && arena.cubePosition?.col !== undefined) {
+        if (
+          arena.cubePosition?.row !== undefined &&
+          arena.cubePosition?.col !== undefined
+        ) {
           row = arena.cubePosition.row;
           col = arena.cubePosition.col;
         } else {
@@ -332,7 +342,7 @@ const Cubes: React.FC<CubesProps> = ({
           col = startCol + (index % actualGridSize);
         }
       }
-      
+
       return { row, col, arena };
     });
   };
@@ -387,6 +397,23 @@ const Cubes: React.FC<CubesProps> = ({
                 gridRow: row + 1,
               }}
             >
+              {/* Floating Enter Arena Text - Outside cube, positioned absolutely */}
+              {arena && (
+                <div
+                  className={`pointer-events-none absolute inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
+                    isHovered ? "scale-100 opacity-100" : "scale-75 opacity-0"
+                  }`}
+                  style={{
+                    transformStyle: "flat", // Prevent 3D inheritance
+                    transform: "none", // Remove any 3D transforms
+                  }}
+                >
+                  <span className="drop-shadow-4xl rounded bg-black/50 px-3 py-1 text-lg font-bold text-white">
+                    Enter Arena
+                  </span>
+                </div>
+              )}
+
               {/* Cube with 3D transformation */}
               <div
                 className={`cube relative aspect-square h-full w-full [transform-style:preserve-3d] ${
@@ -416,23 +443,6 @@ const Cubes: React.FC<CubesProps> = ({
               >
                 <span className="pointer-events-none absolute -inset-9" />
 
-                {/* Floating Enter Arena Text - Above cube */}
-                {arena && (
-                  <div
-                    className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-all duration-300 ${
-                      isHovered ? "scale-100 opacity-100" : "scale-75 opacity-0"
-                    }`}
-                    style={{
-                      transform: "translateZ(50px)", // Position above the cube
-                      transformStyle: "preserve-3d",
-                    }}
-                  >
-                    <span className="drop-shadow-4xl text-lg font-bold text-white bg-black/50 px-3 py-1 rounded">
-                      Enter Arena
-                    </span>
-                  </div>
-                )}
-
                 {/* Battle Image - Inside 3D cube space */}
                 {arena && (
                   <div
@@ -447,15 +457,15 @@ const Cubes: React.FC<CubesProps> = ({
                     }}
                   >
                     {arena.battle_image ? (
-                      <img 
-                        src={arena.battle_image} 
-                        alt={arena.battle_name || "Battle"} 
-                        width={48} 
-                        height={48}
+                      <img
+                        src={arena.battle_image}
+                        alt={arena.battle_name || "Battle"}
+                        width={64}
+                        height={64}
                         className="object-contain"
                       />
                     ) : (
-                      <SolanaIcon width={48} height={48} />
+                      <SolanaIcon width={64} height={64} />
                     )}
                   </div>
                 )}
@@ -524,9 +534,7 @@ const Cubes: React.FC<CubesProps> = ({
                 <div
                   className="cube-face absolute inset-0 flex items-center justify-center"
                   style={{
-                    background: arena
-                      ? "rgba(111, 183, 165, 0.1)"
-                      : faceColor,
+                    background: arena ? "rgba(111, 183, 165, 0.1)" : faceColor,
                     border: arena
                       ? `2px solid #6fb7a5`
                       : "var(--cube-face-border)", // Use primary color

@@ -107,10 +107,8 @@ export default function VaultDetailPage() {
   const { balance, isLoading: balanceLoading, tokenSymbol } = useTokenBalance();
 
   // Use real performance data
-  const {
-    performanceData,
-    refetch: refetchPerformance,
-  } = useVaultPerformance(vaultId);
+  const { performanceData, refetch: refetchPerformance } =
+    useVaultPerformance(vaultId);
 
   // Handle dynamic back navigation
   const handleBackNavigation = () => {
@@ -1156,10 +1154,10 @@ export default function VaultDetailPage() {
                       </div>
                       <input
                         type="text"
-                        placeholder="Enter amount"
+                        placeholder="0.00"
                         value={amount}
                         onChange={(e) => handleAmountChange(e.target.value)}
-                        className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-2xl font-medium text-white focus:outline-none"
+                        className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
                       />
                     </div>
                   </div>

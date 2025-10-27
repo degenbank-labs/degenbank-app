@@ -45,15 +45,20 @@ export default function BattleArenaPage() {
     switch (tab) {
       case "stake":
         return allArenas.filter(
-          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Stake Phase"
+          (arena) =>
+            getBattlePhase(arena.battle_start, arena.battle_end) ===
+            "Stake Phase"
         );
       case "battle":
         return allArenas.filter(
-          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
+          (arena) =>
+            getBattlePhase(arena.battle_start, arena.battle_end) ===
+            "Battle Phase"
         );
       case "completed":
         return allArenas.filter(
-          (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Completed"
+          (arena) =>
+            getBattlePhase(arena.battle_start, arena.battle_end) === "Completed"
         );
       default:
         return allArenas;
@@ -76,7 +81,8 @@ export default function BattleArenaPage() {
   // Calculate real-time stats using timestamp-based logic
   const calculateStats = () => {
     const activeBattles = allArenas.filter(
-      (arena) => getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
+      (arena) =>
+        getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
     ).length;
     const totalPrizes = allArenas.reduce(
       (sum, arena) => sum + (arena.prize_pool || 0),
@@ -301,25 +307,25 @@ export default function BattleArenaPage() {
                 <TabsList className="grid w-full grid-cols-4 rounded-none border border-white/10 bg-black/50">
                   <TabsTrigger
                     value="all"
-                    className="data-[state=active]:bg-primary rounded-none data-[state=active]:text-black"
+                    className="data-[state=active]:bg-primary cursor-pointer rounded-none data-[state=active]:text-black"
                   >
                     All Battles
                   </TabsTrigger>
                   <TabsTrigger
                     value="stake"
-                    className="rounded-none data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                    className="cursor-pointer rounded-none data-[state=active]:bg-blue-500 data-[state=active]:text-white"
                   >
                     Stake Phase
                   </TabsTrigger>
                   <TabsTrigger
                     value="battle"
-                    className="rounded-none data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                    className="cursor-pointer rounded-none data-[state=active]:bg-green-500 data-[state=active]:text-white"
                   >
                     Battle Phase
                   </TabsTrigger>
                   <TabsTrigger
                     value="completed"
-                    className="rounded-none data-[state=active]:bg-gray-500 data-[state=active]:text-white"
+                    className="cursor-pointer rounded-none data-[state=active]:bg-gray-500 data-[state=active]:text-white"
                   >
                     Completed
                   </TabsTrigger>
@@ -385,7 +391,10 @@ export default function BattleArenaPage() {
                               variant="outline"
                               className={`${getStatusColor(getBattlePhase(currentArena.battle_start, currentArena.battle_end))} rounded-none`}
                             >
-                              {getBattlePhase(currentArena.battle_start, currentArena.battle_end)}
+                              {getBattlePhase(
+                                currentArena.battle_start,
+                                currentArena.battle_end
+                              )}
                             </Badge>
                             <Badge
                               variant="outline"
