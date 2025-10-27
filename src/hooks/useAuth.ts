@@ -150,7 +150,9 @@ export function useAuth() {
 
   // Sync user with backend
   const syncWithBackend = useCallback(async () => {
-    if (!privyUser || !ready || !authenticated || isSyncing) return;
+    if (!privyUser || !ready || !authenticated || isSyncing) {
+      return;
+    }
 
     // Clear any existing timeout
     if (syncTimeoutRef.current) {
@@ -178,6 +180,14 @@ export function useAuth() {
           return;
         }
 
+        // First try to get existing user
+        const existingUser = await apiService.getUser(walletAddress);
+        if (existingUser) {
+          setUser(existingUser);
+          return;
+        }
+
+        // If user doesn't exist, create new user
         const accessToken = await getAccessToken();
         if (!accessToken) {
           console.error("No access token available");
@@ -200,8 +210,19 @@ export function useAuth() {
           error instanceof Error &&
           error.message.includes("User already exists")
         ) {
-          // User already exists, this is fine
-  
+          // User already exists, fetch the existing user
+          try {
+            const currentWalletAddress = getWalletAddress();
+            if (currentWalletAddress) {
+              const existingUser = await apiService.getUser(currentWalletAddress);
+              if (existingUser) {
+                setUser(existingUser);
+              }
+            }
+          } catch (fetchError) {
+            console.error("Failed to fetch existing user:", fetchError);
+            toast.error("Failed to fetch user data");
+          }
         } else {
           toast.error("Failed to sync user data");
         }
@@ -224,7 +245,8 @@ export function useAuth() {
 
   // Handle authentication state changes
   useEffect(() => {
-    if (ready && authenticated && privyUser && !user && !isLoggingOut) {
+    if (ready && authenticated && privyUser && !isLoggingOut && !user) {
+      // Only sync when user is null to avoid infinite calls
       syncWithBackend();
     } else if (ready && !authenticated && !isLoggingOut) {
       setUser(null);
@@ -236,7 +258,7 @@ export function useAuth() {
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [ready, authenticated, privyUser, user, syncWithBackend, isLoggingOut]);
+  }, [ready, authenticated, privyUser, isLoggingOut, user]);
 
   const logout = async () => {
     setIsLoggingOut(true);

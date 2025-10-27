@@ -52,24 +52,41 @@ export default function BattleDetailPage() {
     fetchBattle();
   }, [battleId, getBattleById]);
 
-  // Real-time duration update
+  // Real-time duration update - optimized to prevent infinite loop and unnecessary API calls
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (battle) {
-        const fetchBattle = async () => {
-          try {
-            const battleData = await getBattleById(battleId);
-            setBattle(battleData);
-          } catch (err) {
-            console.error("Failed to refresh battle:", err);
+    // Only start interval if we have battle data and battleId
+    if (!battleId || !battle) return;
+
+    // Only update if battle is still active (not completed or ended)
+    const isActiveBattle = battle.status === 'open_deposit' || 
+                          battle.status === 'ongoing_battle' ||
+                          new Date(battle.battle_end) > new Date();
+
+    if (!isActiveBattle) {
+      console.log('Battle is not active, skipping real-time updates');
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const battleData = await getBattleById(battleId);
+        if (battleData) {
+          setBattle(battleData);
+          
+          // Stop updating if battle has ended
+          const battleEnded = new Date(battleData.battle_end) <= new Date();
+          if (battleEnded) {
+            console.log('Battle has ended, stopping real-time updates');
+            clearInterval(interval);
           }
-        };
-        fetchBattle();
+        }
+      } catch (err) {
+        console.error("Failed to refresh battle:", err);
       }
-    }, 60000); // Update every minute
+    }, 120000); // Update every 2 minutes instead of 1 minute to reduce API calls
 
     return () => clearInterval(interval);
-  }, [battle, battleId, getBattleById]);
+  }, [battleId, getBattleById]); // Removed 'battle' from dependencies to prevent infinite loop
 
   // Get dynamic battle phases based on timestamps
   const battlePhases = battle
@@ -291,7 +308,7 @@ export default function BattleDetailPage() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            {getStatusIcon(vault.battle_status || "active")}
+                            {getStatusIcon("active")}
                             <span
                               className={`text-sm font-semibold ${getRiskColor(vault.risk_level || "Medium")}`}
                             >

@@ -298,7 +298,7 @@ export default function VaultDetailPage() {
             battle_id: battleData.battle_id,
             battle_name: battleData.battle_name,
             pda_address: battleData.pda_address || battleData.pda_address,
-            battle_status: battleData.battle_status,
+            status: battleData.status,
           });
         } catch (battleError) {
           console.error("Battle validation failed:", battleError);
@@ -372,32 +372,62 @@ export default function VaultDetailPage() {
     let statusText: string;
 
     switch (phase) {
-      case "Registration":
-        statusColor = "text-primary";
-        statusText = "Registration Open";
-        break;
-      case "Stake Phase":
+      case "stake_phase":
         statusColor = "text-primary";
         statusText = "Staking Phase";
         break;
-      case "Battle Phase":
+      case "battle_phase":
         statusColor = "text-purple-400";
         statusText = "In Battle";
         break;
-      case "Resolution Phase":
-        statusColor = "text-profit";
-        statusText = "Resolving";
-        break;
-      case "Completed":
+      case "completed":
         statusColor = "text-profit";
         statusText = "Completed";
         break;
       default:
         statusColor = "text-muted-foreground";
-        statusText = battleData.battle_status;
+        statusText = battleData.status;
     }
 
     return <span className={`font-medium ${statusColor}`}>{statusText}</span>;
+  };
+
+  // Helper functions to check if deposit/withdraw is allowed
+  const isDepositAllowed = () => {
+    if (!battleData) return false;
+    return battleData.current_phase === "stake_phase";
+  };
+
+  const isWithdrawAllowed = () => {
+    if (!battleData) return false;
+    return battleData.current_phase === "completed";
+  };
+
+  // Helper function to get phase restriction message
+  const getPhaseRestrictionMessage = (action: "deposit" | "withdraw") => {
+    if (!battleData) return "Battle data not available";
+
+    const phase = battleData.current_phase;
+
+    if (action === "deposit") {
+      switch (phase) {
+        case "battle_phase":
+          return "Deposits are not allowed during battle phase";
+        case "completed":
+          return "Deposits are not allowed after battle completion";
+        default:
+          return "Deposits are only allowed during staking phase";
+      }
+    } else {
+      switch (phase) {
+        case "stake_phase":
+          return "Withdrawals are not allowed during staking phase";
+        case "battle_phase":
+          return "Withdrawals are not allowed during battle phase";
+        default:
+          return "Withdrawals are only allowed after battle completion";
+      }
+    }
   };
 
   // Loading state
@@ -448,10 +478,6 @@ export default function VaultDetailPage() {
       </div>
     );
   }
-
-
-
-
 
   const formatAPY = (apy: number | null | undefined) => {
     // Convert to number and handle null/undefined/invalid values
@@ -925,89 +951,112 @@ export default function VaultDetailPage() {
                         : "After the 1 day redemption period, your funds can be withdrawn to your wallet.\n\nThe maximum withdrawal amount is based on share value at request time, though the final amount may be lower."}
                     </p>
 
-                    {/* Amount Input */}
-                    <div className="mb-6">
-                      <div className="mb-2 flex items-center justify-between">
-                        <label className="text-muted-foreground text-sm">
-                          Amount
-                        </label>
-                        <button
-                          onClick={handleMaxClick}
-                          className="text-muted-foreground cursor-pointer text-sm hover:text-white"
-                        >
-                          Max:{" "}
-                          {balanceLoading
-                            ? "..."
-                            : formatUSDC(balance, { showSymbol: false })}
-                        </button>
+                    {/* Check if action is allowed based on battle phase */}
+                    {(depositWithdrawTab === "deposit" &&
+                      !isDepositAllowed()) ||
+                    (depositWithdrawTab === "withdraw" &&
+                      !isWithdrawAllowed()) ? (
+                      /* Phase Restriction Message */
+                      <div className="mb-6 border border-purple-500/20 bg-purple-500/10 p-4">
+                        <p className="text-sm text-purple-400">
+                          {getPhaseRestrictionMessage(depositWithdrawTab)}
+                        </p>
+                        {battleData && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Current phase:{" "}
+                            {battleData.current_phase.replace("_", " ")}
+                          </p>
+                        )}
                       </div>
-                      <div className="bg-background border-border relative border">
-                        <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
-                          <UsdcIconSvg width={20} height={20} />
-                          <span className="text-sm font-medium text-white">
-                            {tokenSymbol}
-                          </span>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="0.00"
-                          value={amount}
-                          onChange={(e) => handleAmountChange(e.target.value)}
-                          className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Balance */}
-                    <div className="mb-6 flex justify-between text-sm">
-                      <span className="text-muted-foreground">Balance</span>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white">
-                          {balanceLoading
-                            ? "Loading..."
-                            : formatUSDC(balance, { showSymbol: true })}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Button */}
-                    {!isConnected ? (
-                      <Button
-                        onClick={login}
-                        className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
-                      >
-                        Login to{" "}
-                        {depositWithdrawTab === "deposit"
-                          ? "Deposit"
-                          : "Withdraw"}
-                      </Button>
                     ) : (
-                      <Button
-                        onClick={
-                          depositWithdrawTab === "deposit"
-                            ? handleDeposit
-                            : handleWithdraw
-                        }
-                        disabled={
-                          !isAmountValid() ||
-                          (depositWithdrawTab === "deposit"
-                            ? depositState.isLoading
-                            : withdrawState.isLoading)
-                        }
-                        className={`w-full cursor-pointer py-3 text-sm font-medium ${
-                          depositWithdrawTab === "deposit"
-                            ? "bg-profit hover:bg-profit/90 text-black"
-                            : "bg-loss hover:bg-loss/90 text-white"
-                        }`}
-                      >
-                        {depositWithdrawTab === "deposit"
-                          ? depositState.isLoading
-                            ? "Processing..."
-                            : "Confirm Deposit"
-                          : withdrawState.isLoading
-                            ? "Processing..."
-                            : "Request Withdrawal"}
-                      </Button>
+                      <>
+                        {/* Amount Input */}
+                        <div className="mb-6">
+                          <div className="mb-2 flex items-center justify-between">
+                            <label className="text-muted-foreground text-sm">
+                              Amount
+                            </label>
+                            <button
+                              onClick={handleMaxClick}
+                              className="text-muted-foreground cursor-pointer text-sm hover:text-white"
+                            >
+                              Max:{" "}
+                              {balanceLoading
+                                ? "..."
+                                : formatUSDC(balance, { showSymbol: false })}
+                            </button>
+                          </div>
+                          <div className="bg-background border-border relative border">
+                            <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
+                              <UsdcIconSvg width={20} height={20} />
+                              <span className="text-sm font-medium text-white">
+                                {tokenSymbol}
+                              </span>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="0.00"
+                              value={amount}
+                              onChange={(e) =>
+                                handleAmountChange(e.target.value)
+                              }
+                              className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Balance */}
+                        <div className="mb-6 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Balance</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-white">
+                              {balanceLoading
+                                ? "Loading..."
+                                : formatUSDC(balance, { showSymbol: true })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Action Button */}
+                        {!isConnected ? (
+                          <Button
+                            onClick={login}
+                            className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+                          >
+                            Login to{" "}
+                            {depositWithdrawTab === "deposit"
+                              ? "Deposit"
+                              : "Withdraw"}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={
+                              depositWithdrawTab === "deposit"
+                                ? handleDeposit
+                                : handleWithdraw
+                            }
+                            disabled={
+                              !isAmountValid() ||
+                              (depositWithdrawTab === "deposit"
+                                ? depositState.isLoading
+                                : withdrawState.isLoading)
+                            }
+                            className={`w-full cursor-pointer py-3 text-sm font-medium ${
+                              depositWithdrawTab === "deposit"
+                                ? "bg-profit hover:bg-profit/90 text-black"
+                                : "bg-loss hover:bg-loss/90 text-white"
+                            }`}
+                          >
+                            {depositWithdrawTab === "deposit"
+                              ? depositState.isLoading
+                                ? "Processing..."
+                                : "Confirm Deposit"
+                              : withdrawState.isLoading
+                                ? "Processing..."
+                                : "Request Withdrawal"}
+                          </Button>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -1128,101 +1177,129 @@ export default function VaultDetailPage() {
                       : "After the 1 day redemption period, your funds can be withdrawn to your wallet.\n\nThe maximum withdrawal amount is based on share value at request time, though the final amount may be lower."}
                   </p>
 
-                  {/* Amount Input */}
-                  <div className="mb-6">
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-muted-foreground text-sm">
-                        Amount
-                      </label>
-                      <button
-                        onClick={handleMaxClick}
-                        className="text-muted-foreground cursor-pointer text-sm hover:text-white"
-                      >
-                        Max:{" "}
-                        {balanceLoading
-                          ? "..."
-                          : formatUSDC(balance, { showSymbol: false })}
-                      </button>
-                    </div>
-                    <div className="bg-background border-border relative border">
-                      <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
-                        <UsdcIconSvg width={20} height={20} />
-                        <span className="text-sm font-medium text-white">
-                          {tokenSymbol}
+                  {/* Check if action is allowed based on battle phase */}
+                  {(depositWithdrawTab === "deposit" && !isDepositAllowed()) ||
+                  (depositWithdrawTab === "withdraw" &&
+                    !isWithdrawAllowed()) ? (
+                    /* Phase Restriction Message */
+                    <div className="mb-6 rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+                      <div className="flex items-center space-x-2">
+                        <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
+                        <span className="text-sm font-medium text-yellow-500">
+                          Action Not Available
                         </span>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => handleAmountChange(e.target.value)}
-                        className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
-                      />
+                      <p className="mt-2 text-sm text-yellow-400">
+                        {getPhaseRestrictionMessage(depositWithdrawTab)}
+                      </p>
+                      {battleData && (
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Current phase:{" "}
+                          {battleData.current_phase.replace("_", " ")}
+                        </p>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="mb-6 flex justify-between text-sm">
-                    <span className="text-muted-foreground">Balance</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-white">
-                        {balanceLoading
-                          ? "Loading..."
-                          : formatUSDC(balance, { showSymbol: true })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Button */}
-                  {!isConnected ? (
-                    <Button
-                      onClick={login}
-                      className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
-                    >
-                      Login to{" "}
-                      {depositWithdrawTab === "deposit"
-                        ? "Deposit"
-                        : "Withdraw"}
-                    </Button>
                   ) : (
-                    <Button
-                      onClick={
-                        depositWithdrawTab === "deposit"
-                          ? handleDeposit
-                          : handleWithdraw
-                      }
-                      disabled={
-                        !isAmountValid() ||
-                        (depositWithdrawTab === "deposit"
-                          ? depositState.isLoading
-                          : withdrawState.isLoading)
-                      }
-                      className={`w-full cursor-pointer py-3 text-sm font-medium ${
-                        depositWithdrawTab === "deposit"
-                          ? "bg-profit hover:bg-profit/90 text-black"
-                          : "bg-loss hover:bg-loss/90 text-white"
-                      }`}
-                    >
-                      {depositWithdrawTab === "deposit"
-                        ? depositState.isLoading
-                          ? "Processing..."
-                          : "Confirm Deposit"
-                        : withdrawState.isLoading
-                          ? "Processing..."
-                          : "Request Withdrawal"}
-                    </Button>
-                  )}
+                    <>
+                      {/* Amount Input */}
+                      <div className="mb-6">
+                        <div className="mb-2 flex items-center justify-between">
+                          <label className="text-muted-foreground text-sm">
+                            Amount
+                          </label>
+                          <button
+                            onClick={handleMaxClick}
+                            className="text-muted-foreground cursor-pointer text-sm hover:text-white"
+                          >
+                            Max:{" "}
+                            {balanceLoading
+                              ? "..."
+                              : formatUSDC(balance, { showSymbol: false })}
+                          </button>
+                        </div>
+                        <div className="bg-background border-border relative border">
+                          <div className="absolute top-1/2 left-3 flex -translate-y-1/2 transform items-center space-x-2">
+                            <UsdcIconSvg width={20} height={20} />
+                            <span className="text-sm font-medium text-white">
+                              {tokenSymbol}
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="0.00"
+                            value={amount}
+                            onChange={(e) => handleAmountChange(e.target.value)}
+                            className="w-full bg-transparent py-3 pr-4 pl-20 text-right text-xl font-medium text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Error Messages */}
-                  {depositState.error && depositWithdrawTab === "deposit" && (
-                    <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                      {depositState.error}
-                    </div>
-                  )}
-                  {withdrawState.error && depositWithdrawTab === "withdraw" && (
-                    <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
-                      {withdrawState.error}
-                    </div>
+                      {/* Balance */}
+                      <div className="mb-6 flex justify-between text-sm">
+                        <span className="text-muted-foreground">Balance</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white">
+                            {balanceLoading
+                              ? "Loading..."
+                              : formatUSDC(balance, { showSymbol: true })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      {!isConnected ? (
+                        <Button
+                          onClick={login}
+                          className="w-full cursor-pointer bg-blue-600 py-3 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                          Login to{" "}
+                          {depositWithdrawTab === "deposit"
+                            ? "Deposit"
+                            : "Withdraw"}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={
+                            depositWithdrawTab === "deposit"
+                              ? handleDeposit
+                              : handleWithdraw
+                          }
+                          disabled={
+                            !isAmountValid() ||
+                            (depositWithdrawTab === "deposit"
+                              ? depositState.isLoading
+                              : withdrawState.isLoading)
+                          }
+                          className={`w-full cursor-pointer py-3 text-sm font-medium ${
+                            depositWithdrawTab === "deposit"
+                              ? "bg-profit hover:bg-profit/90 text-black"
+                              : "bg-loss hover:bg-loss/90 text-white"
+                          }`}
+                        >
+                          {depositWithdrawTab === "deposit"
+                            ? depositState.isLoading
+                              ? "Processing..."
+                              : "Confirm Deposit"
+                            : withdrawState.isLoading
+                              ? "Processing..."
+                              : "Request Withdrawal"}
+                        </Button>
+                      )}
+
+                      {/* Error Messages */}
+                      {depositState.error &&
+                        depositWithdrawTab === "deposit" && (
+                          <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                            {depositState.error}
+                          </div>
+                        )}
+                      {withdrawState.error &&
+                        depositWithdrawTab === "withdraw" && (
+                          <div className="mt-4 rounded border border-red-500/30 bg-red-900/20 p-3 text-sm text-red-400">
+                            {withdrawState.error}
+                          </div>
+                        )}
+                    </>
                   )}
                 </CardContent>
               </Card>

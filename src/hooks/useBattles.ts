@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiService } from "@/lib/api";
 import { Battle } from "@/lib/api";
+import { calculateTimeRemaining } from "@/utils/battleStatus";
 
 // Extended interface for frontend display - using backend data with computed fields
 export interface BattleWithMetrics extends Battle {
@@ -29,20 +30,6 @@ export function useBattles() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const calculateTimeRemaining = (endDate: string): string => {
-    const now = new Date();
-    const end = new Date(endDate);
-    const diff = end.getTime() - now.getTime();
-    
-    if (diff <= 0) return "Ended";
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${days}d ${hours}h ${minutes}m`;
-  };
 
   const fetchBattles = async () => {
     try {
@@ -74,7 +61,7 @@ export function useBattles() {
 
         // Calculate stats from real data
         const totalActiveBattles = transformedBattles.filter(
-          (b) => b.battle_status === "active"
+          (b) => b.status === "open_deposit" || b.status === "ongoing_battle"
         ).length;
         const totalPrizePool = transformedBattles.reduce(
           (sum, b) => sum + b.prize_pool,
@@ -104,7 +91,7 @@ export function useBattles() {
     }
   };
 
-  const getBattleById = async (
+  const getBattleById = useCallback(async (
     battleId: string
   ): Promise<BattleWithMetrics | null> => {
     try {
@@ -128,7 +115,7 @@ export function useBattles() {
       console.error("Error fetching battle:", err);
       throw err;
     }
-  };
+  }, []); // Empty dependency array since this function doesn't depend on any state
 
   const refreshBattles = () => {
     fetchBattles();

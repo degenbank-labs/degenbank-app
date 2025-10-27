@@ -18,6 +18,17 @@ export interface User {
   joinDate: string;
 }
 
+// Backend user response interface (snake_case fields)
+interface BackendUser {
+  user_id: string;
+  fullname: string;
+  privy_id: string | null;
+  wallet_address: string;
+  email: string | null;
+  image: string;
+  join_date: string;
+}
+
 // Get all users response structure
 export interface GetUsersResponse {
   results: User[];
@@ -58,7 +69,6 @@ export interface Vault {
   description: string;
   manager_id: string;
   battle_id: number | null;
-  battle_status: string;
   last_performance_update: string; // Date as ISO string from API
   risk_level: string;
   apy: number;
@@ -108,11 +118,11 @@ export interface Battle {
   owner_address: string;
   pda_address: string;
   arena_type: 'DCA Strategy' | 'Lending Strategy' | 'Mixed Strategy' | 'Yield Farming';
-  current_phase: 'Registration' | 'Stake Phase' | 'Battle Phase' | 'Resolution Phase' | 'Completed';
+  current_phase: 'stake_phase' | 'battle_phase' | 'completed';
   prize_pool: number; // bigint from backend converted to number
   winner_vault_id: string | null;
   arena_color: string | null;
-  battle_status: 'active';
+  status: 'open_deposit' | 'ongoing_battle' | 'completed';
   vaults?: Vault[];
 }
 
@@ -210,6 +220,12 @@ class ApiService {
       ...options,
     };
 
+    console.log(`📡 Making API request to ${endpoint}:`, {
+      method: config.method || 'GET',
+      hasAuthHeader: !!headers['Authorization'],
+      headers: Object.keys(headers)
+    });
+
     try {
       const response = await fetch(url, config);
       
@@ -253,11 +269,25 @@ class ApiService {
     const maxRetries = 2;
     
     try {
-      const response = await this.request<User>('/users', {
+      const response = await this.request<BackendUser>('/users', {
         method: 'POST',
         body: JSON.stringify(userData),
       }, token);
-      return response.data;
+      
+      const backendUser = response.data;
+      
+      // Map backend response fields to frontend interface
+      const user: User = {
+        userId: backendUser.user_id,
+        fullname: backendUser.fullname,
+        privyId: backendUser.privy_id,
+        walletAddress: backendUser.wallet_address,
+        email: backendUser.email,
+        image: backendUser.image,
+        joinDate: backendUser.join_date
+      };
+      
+      return user;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
@@ -278,10 +308,32 @@ class ApiService {
     }
   }
 
-  // Get user by ID
-  async getUser(id: string): Promise<User> {
-    const response = await this.request<User>(`/users/${id}`);
-    return response.data;
+  // Get user by wallet address
+  async getUser(walletAddress: string): Promise<User | null> {
+    try {
+      const response = await this.request<BackendUser>(`/users/wallet/${walletAddress}`);
+      const backendUser = response.data;
+      
+      // Map backend response fields to frontend interface
+      const user: User = {
+        userId: backendUser.user_id,
+        fullname: backendUser.fullname,
+        privyId: backendUser.privy_id,
+        walletAddress: backendUser.wallet_address,
+        email: backendUser.email,
+        image: backendUser.image,
+        joinDate: backendUser.join_date
+      };
+      
+      return user;
+    } catch (error) {
+      // If user not found (404), return null instead of throwing error
+      if (error instanceof Error && error.message.includes('status: 404')) {
+        return null;
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   // Get all users

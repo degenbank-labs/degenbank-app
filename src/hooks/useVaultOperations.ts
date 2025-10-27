@@ -26,6 +26,7 @@ import {
   solanaService,
 } from "@/lib/solana";
 import { apiService } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Program, AnchorProvider, Idl, Wallet, BN } from "@coral-xyz/anchor";
 import IDL from "@/idl/idl.json";
@@ -81,6 +82,7 @@ interface SuccessModalState {
 
 export const useVaultOperations = () => {
   const { authenticated, user: privyUser, getAccessToken } = usePrivy();
+  const { user } = useAuth();
   const { wallets } = useWallets();
   const [depositState, setDepositState] = useState<VaultOperationState>({
     isLoading: false,
@@ -100,18 +102,21 @@ export const useVaultOperations = () => {
   });
 
   // Function to show success modal
-  const showSuccessModal = useCallback((
-    txSignature: string,
-    transactionType: "deposit" | "withdraw",
-    amount: number
-  ) => {
-    setSuccessModal({
-      isOpen: true,
-      txSignature,
-      transactionType,
-      amount,
-    });
-  }, []);
+  const showSuccessModal = useCallback(
+    (
+      txSignature: string,
+      transactionType: "deposit" | "withdraw",
+      amount: number
+    ) => {
+      setSuccessModal({
+        isOpen: true,
+        txSignature,
+        transactionType,
+        amount,
+      });
+    },
+    []
+  );
 
   // Function to close success modal
   const closeSuccessModal = useCallback(() => {
@@ -368,7 +373,7 @@ export const useVaultOperations = () => {
       if (!transaction.feePayer) {
         transaction.feePayer = new PublicKey(selectedWallet.address);
       }
-      
+
       if (!transaction.recentBlockhash) {
         transaction.recentBlockhash = (
           await connection.getLatestBlockhash()
@@ -424,7 +429,8 @@ export const useVaultOperations = () => {
           throw new Error("Amount must be greater than 0");
         }
 
-        if (amount > 1000000) { // Reasonable upper limit
+        if (amount > 1000000) {
+          // Reasonable upper limit
           throw new Error("Amount is too large");
         }
 
@@ -441,10 +447,13 @@ export const useVaultOperations = () => {
           throw new Error("Vault address is missing or invalid");
         }
 
-        // Note: Vault availability should be checked via battle_status or other backend fields
+        // Note: Vault availability should be checked via backend fields
 
         // Validate vault_token_mint before creating PublicKey
-        if (!vaultData.vault_token_mint || vaultData.vault_token_mint.trim() === "") {
+        if (
+          !vaultData.vault_token_mint ||
+          vaultData.vault_token_mint.trim() === ""
+        ) {
           throw new Error("Vault token mint is missing or invalid");
         }
 
@@ -452,7 +461,9 @@ export const useVaultOperations = () => {
         try {
           vaultTokenMint = new PublicKey(vaultData.vault_token_mint);
         } catch (error) {
-          throw new Error(`Invalid vault token mint address: ${vaultData.vault_token_mint}`);
+          throw new Error(
+            `Invalid vault token mint address: ${vaultData.vault_token_mint}`
+          );
         }
 
         // Use vault_address instead of vault_id for PublicKey creation
@@ -505,32 +516,29 @@ export const useVaultOperations = () => {
         // Validate battle lock period
         if (battleData) {
           const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-          
+
           // Check if battle has start and end times
           if (battleData.battle_start && battleData.battle_end) {
-            const battleStart = Math.floor(new Date(battleData.battle_start).getTime() / 1000);
-            const battleEnd = Math.floor(new Date(battleData.battle_end).getTime() / 1000);
-            
-            // Based on smart contract logic, deposits might be locked during specific periods
-            // Let's be more permissive here and let the smart contract handle the validation
-            console.log(`Battle timing - Current: ${currentTime}, Start: ${battleStart}, End: ${battleEnd}`);
-            
+            const battleEnd = Math.floor(
+              new Date(battleData.battle_end).getTime() / 1000
+            );
+
             // Only block if battle has ended (completed)
             if (currentTime > battleEnd) {
               console.warn(
-                `Battle has ended. Battle "${battleData.battle_name || 'Unknown'}" ended at ${new Date(battleData.battle_end).toLocaleString()}. Deposits may not be allowed for completed battles.`
+                `Battle has ended. Battle "${battleData.battle_name || "Unknown"}" ended at ${new Date(battleData.battle_end).toLocaleString()}. Deposits may not be allowed for completed battles.`
               );
             }
-            
+
             // Check for specific phases that definitely block deposits
-            if (battleData.current_phase === "Completed") {
+            if (battleData.current_phase === "completed") {
               throw new Error(
                 `Deposits are not allowed for completed battles. Current phase: ${battleData.current_phase}.`
               );
             }
           }
-          
-          // Note: battle_status is always 'active' according to the model, so no need to check it
+
+          // Note: Vault status validation is handled by backend
         }
 
         // Get PDAs and token accounts
@@ -552,7 +560,10 @@ export const useVaultOperations = () => {
 
         // Validate vault_token_address before creating PublicKey
         let vaultTokenAccount: PublicKey;
-        if (vaultData.vault_token_address && vaultData.vault_token_address.trim() !== "") {
+        if (
+          vaultData.vault_token_address &&
+          vaultData.vault_token_address.trim() !== ""
+        ) {
           try {
             vaultTokenAccount = new PublicKey(vaultData.vault_token_address);
           } catch (error) {
@@ -595,8 +606,8 @@ export const useVaultOperations = () => {
 
           if (battleData) {
             errorMessage += ` Battle ID ${battleData.battle_id} (${battleData.battle_name || "Unknown"}) may not be properly initialized on-chain.`;
-            if (battleData.battle_status !== "active") {
-              errorMessage += ` Battle status is currently: ${battleData.battle_status}.`;
+            if (battleData.status === "completed") {
+              errorMessage += ` Battle status is currently: ${battleData.status}.`;
             }
           } else {
             errorMessage += ` Unable to fetch battle data from database.`;
@@ -616,7 +627,8 @@ export const useVaultOperations = () => {
         }
 
         // Validate vault token mint
-        const vaultTokenMintInfo = await connection.getAccountInfo(vaultTokenMint);
+        const vaultTokenMintInfo =
+          await connection.getAccountInfo(vaultTokenMint);
         if (!vaultTokenMintInfo) {
           throw new Error(
             `Vault token mint does not exist: ${vaultTokenMint.toString()}`
@@ -629,7 +641,6 @@ export const useVaultOperations = () => {
             depositorTokenAccount
           );
           if (!depositorTokenAccountInfo) {
-            console.log("Creating depositor token account...");
             transaction.add(
               createAssociatedTokenAccountInstruction(
                 userPubkey,
@@ -645,7 +656,6 @@ export const useVaultOperations = () => {
             depositorVtokenAccount
           );
           if (!depositorVtokenAccountInfo) {
-            console.log("Creating depositor vtoken account...");
             transaction.add(
               createAssociatedTokenAccountInstruction(
                 userPubkey,
@@ -660,7 +670,6 @@ export const useVaultOperations = () => {
           const vaultTokenAccountInfo =
             await connection.getAccountInfo(vaultTokenAccount);
           if (!vaultTokenAccountInfo) {
-            console.log("Creating vault token account...");
             transaction.add(
               createAssociatedTokenAccountInstruction(
                 userPubkey,
@@ -706,13 +715,11 @@ export const useVaultOperations = () => {
         // Send transaction with proper error handling
         let signature: string;
         try {
-          console.log("Preparing transaction for sending...");
-          
           // Set fee payer and recent blockhash for simulation
           if (!privyUser || !wallets.length) {
             throw new Error("Wallet not connected for transaction");
           }
-          
+
           const selectedWallet = wallets[0];
           transaction.feePayer = new PublicKey(selectedWallet.address);
           transaction.recentBlockhash = (
@@ -721,39 +728,36 @@ export const useVaultOperations = () => {
 
           // Simulate transaction before sending (best practice)
           try {
-            console.log("Simulating transaction...");
-            const simulationResult = await connection.simulateTransaction(transaction);
-            
+            const simulationResult =
+              await connection.simulateTransaction(transaction);
+
             if (simulationResult.value.err) {
               throw new Error(
                 `Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`
               );
             }
-            
-            console.log("Transaction simulation successful");
           } catch (error) {
             throw new Error(
               `Transaction simulation error: ${
-                error instanceof Error ? error.message : "Unknown simulation error"
+                error instanceof Error
+                  ? error.message
+                  : "Unknown simulation error"
               }`
             );
           }
 
-          console.log("Sending transaction...");
           signature = await sendTransaction(transaction, []);
-          
+
           if (!signature) {
             throw new Error("Transaction signature is null or undefined");
           }
-          
-          console.log("Transaction sent successfully:", signature);
         } catch (error) {
           // Provide specific error messages for common Solana errors
           let errorMessage = "Transaction failed";
-          
+
           if (error instanceof Error) {
             const errorStr = error.message.toLowerCase();
-            
+
             if (errorStr.includes("insufficient funds")) {
               errorMessage = "Insufficient funds for transaction";
             } else if (errorStr.includes("blockhash not found")) {
@@ -764,14 +768,18 @@ export const useVaultOperations = () => {
               errorMessage = "Transaction was rejected by user";
             } else if (errorStr.includes("timeout")) {
               errorMessage = "Transaction timed out, please try again";
-            } else if (errorStr.includes('"custom":6004') || errorStr.includes('{"custom":6004}')) {
+            } else if (
+              errorStr.includes('"custom":6004') ||
+              errorStr.includes('{"custom":6004}')
+            ) {
               // Handle OnLockPeriod error (Custom:6004)
-              errorMessage = "Deposits are currently locked. The battle is in progress and deposits are not allowed during this period. Please wait until the battle ends to make deposits.";
+              errorMessage =
+                "Deposits are currently locked. The battle is in progress and deposits are not allowed during this period. Please wait until the battle ends to make deposits.";
             } else {
               errorMessage = `Transaction failed: ${error.message}`;
             }
           }
-          
+
           // Set error state and return early - don't continue to success logic
           setDepositState({
             isLoading: false,
@@ -787,42 +795,57 @@ export const useVaultOperations = () => {
         try {
           // Get access token for backend authentication
           const accessToken = await getAccessToken();
-          if (!accessToken) {
-            console.warn("No access token available for backend sync");
+
+          // Use user from useAuth context, fallback to creating user data from privyUser if needed
+          let currentUser = user;
+
+          // If user from useAuth is not available yet, try to get/create user using wallet address
+          if (!currentUser && privyUser && accessToken) {
+            try {
+              // Get wallet address from connected wallets
+              const connectedWallet = wallets.find((wallet) => wallet.address);
+              const walletAddress = connectedWallet?.address;
+
+              if (walletAddress) {
+                currentUser = await apiService.getUser(walletAddress);
+              }
+            } catch (lookupError) {
+              console.log(
+                "Could not lookup user by wallet address:",
+                lookupError
+              );
+            }
           }
 
-          // Get user data from backend to get user ID
-          const walletAddress = getUserPublicKey().toString();
-          let userId: string | null = null;
-          
-          try {
-            const userData = await apiService.getUser(walletAddress);
-            userId = userData?.userId?.toString() || null;
-          } catch (error) {
-            console.warn("Failed to get user data for backend sync:", error);
-          }
-
-          // Record deposit in backend if we have user ID
-          if (userId && accessToken) {
+          // Record deposit in backend if we have user and access token
+          if (currentUser?.userId && accessToken) {
             try {
               // For now, assume shares_received equals amount (1:1 ratio)
               // In a real implementation, this should be calculated based on vault's share price
               const sharesReceived = amount;
-              
+
               const depositData = {
                 amount: amount,
-                shares_received: sharesReceived
+                shares_received: sharesReceived,
               };
 
-              await apiService.recordDeposit(userId, vaultId, depositData, accessToken);
-              console.log("Deposit successfully recorded in backend");
+              await apiService.recordDeposit(
+                currentUser.userId,
+                vaultId,
+                depositData,
+                accessToken
+              );
             } catch (backendError) {
-              console.error("Failed to record deposit in backend:", backendError);
-              // Don't fail the entire operation if backend sync fails
-              // The blockchain transaction was successful
+              console.error(
+                "Failed to record deposit in backend:",
+                backendError
+              );
             }
           } else {
-            console.warn("Skipping backend deposit recording - missing user ID or access token");
+            console.log("Skipping backend deposit recording:", {
+              hasUser: !!currentUser?.userId,
+              hasAccessToken: !!accessToken,
+            });
           }
         } catch (syncError) {
           console.error("Error during backend sync:", syncError);
@@ -840,19 +863,25 @@ export const useVaultOperations = () => {
         return { success: true, signature };
       } catch (error) {
         console.error("Deposit error details:", error);
-        
+
         let errorMessage = "Deposit failed";
-        
+
         if (error instanceof Error) {
           errorMessage = error.message;
-          
+
           // Provide more user-friendly messages for specific error patterns
-          if (errorMessage.includes('"Custom":6004') || errorMessage.includes('{"Custom":6004}')) {
-            errorMessage = "🔒 Deposits are currently locked during the battle period. Please wait until the battle ends to make deposits.";
-          } else if (errorMessage.includes('OnLockPeriod')) {
-            errorMessage = "🔒 The battle is in a lock period. Deposits are temporarily disabled until the battle phase completes.";
-          } else if (errorMessage.includes('Transaction simulation failed')) {
-            errorMessage = "❌ Transaction validation failed. This might be due to timing restrictions or insufficient permissions.";
+          if (
+            errorMessage.includes('"Custom":6004') ||
+            errorMessage.includes('{"Custom":6004}')
+          ) {
+            errorMessage =
+              "Deposits are currently locked during the battle period. Please wait until the battle ends to make deposits.";
+          } else if (errorMessage.includes("OnLockPeriod")) {
+            errorMessage =
+              "The battle is in a lock period. Deposits are temporarily disabled until the battle phase completes.";
+          } else if (errorMessage.includes("Transaction simulation failed")) {
+            errorMessage =
+              "Transaction validation failed. This might be due to timing restrictions or insufficient permissions.";
           }
         } else if (typeof error === "string") {
           errorMessage = error;
@@ -929,42 +958,57 @@ export const useVaultOperations = () => {
         try {
           // Get access token for backend authentication
           const accessToken = await getAccessToken();
-          if (!accessToken) {
-            console.warn("No access token available for backend sync");
+
+          // Use user from useAuth context, fallback to creating user data from privyUser if needed
+          let currentUser = user;
+
+          // If user from useAuth is not available yet, try to get/create user using wallet address
+          if (!currentUser && privyUser && accessToken) {
+            try {
+              // Get wallet address from connected wallets
+              const connectedWallet = wallets.find((wallet) => wallet.address);
+              const walletAddress = connectedWallet?.address;
+
+              if (walletAddress) {
+                currentUser = await apiService.getUser(walletAddress);
+              }
+            } catch (lookupError) {
+              console.log(
+                "Could not lookup user by wallet address:",
+                lookupError
+              );
+            }
           }
 
-          // Get user data from backend to get user ID
-          const walletAddress = getUserPublicKey().toString();
-          let userId: string | null = null;
-          
-          try {
-            const userData = await apiService.getUser(walletAddress);
-            userId = userData?.userId?.toString() || null;
-          } catch (error) {
-            console.warn("Failed to get user data for backend sync:", error);
-          }
-
-          // Record withdrawal in backend if we have user ID
-          if (userId && accessToken) {
+          // Record withdrawal in backend if we have user and access token
+          if (currentUser?.userId && accessToken) {
             try {
               // For now, assume shares_burned equals amount (1:1 ratio)
               // In a real implementation, this should be calculated based on vault's share price
               const sharesBurned = amount;
-              
+
               const withdrawalData = {
                 amount: amount,
-                shares_burned: sharesBurned
+                shares_burned: sharesBurned,
               };
 
-              await apiService.recordWithdrawal(userId, vaultId, withdrawalData, accessToken);
-              console.log("Withdrawal successfully recorded in backend");
+              await apiService.recordWithdrawal(
+                currentUser.userId.toString(),
+                vaultId,
+                withdrawalData,
+                accessToken
+              );
             } catch (backendError) {
-              console.error("Failed to record withdrawal in backend:", backendError);
-              // Don't fail the entire operation if backend sync fails
-              // The blockchain transaction was successful
+              console.error(
+                "Failed to record withdrawal in backend:",
+                backendError
+              );
             }
           } else {
-            console.warn("Skipping backend withdrawal recording - missing user ID or access token");
+            console.log("Skipping backend withdrawal recording:", {
+              hasUser: !!currentUser?.userId,
+              hasAccessToken: !!accessToken,
+            });
           }
         } catch (syncError) {
           console.error("Error during backend sync:", syncError);

@@ -44,8 +44,8 @@ export default function StrategyVaultsPage() {
   const getBattleStatusBadge = (
     vault: VaultWithMetrics
   ) => {
-    // TODO: Replace with actual battle_status check from backend
-    // if (vault.battle_status === 'disqualified') {
+    // TODO: Replace with actual vault status check from backend
+    // if (vault.status === 'disqualified') {
     //   return (
     //     <Badge
     //       variant="secondary"
