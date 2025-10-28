@@ -10,417 +10,202 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserVaultPositions } from "@/hooks/useUserVaultPositions";
+import { UserVaultPosition } from "@/lib/api";
 import { ArrowUpIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useState, useMemo } from "react";
-import { ShieldCheckIcon, Copy, ExternalLink } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ShieldCheckIcon, Eye } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
-// Extended dummy data for positions (25 items for pagination demo)
-const allPositions = [
-  {
-    id: "1",
-    vault: "ETH Yield Maximizer",
-    manager: "0x1234...5678",
-    managerFullAddress: "0x1234567890abcdef1234567890abcdef12345678",
-    amount: 50000,
-    value: 52500,
-    pnl: 2500,
-    pnlPercentage: 5.0,
-    apy: "12.5%",
-    status: "active",
-    depositDate: "2024-01-15",
-    strategy: "Automated yield farming across multiple DeFi protocols",
-  },
-  {
-    id: "2",
-    vault: "BTC Conservative",
-    manager: "0x9876...5432",
-    managerFullAddress: "0x9876543210fedcba9876543210fedcba98765432",
-    amount: 25000,
-    value: 24750,
-    pnl: -250,
-    pnlPercentage: -1.0,
-    apy: "8.2%",
-    status: "locked",
-    depositDate: "2024-01-20",
-    strategy: "Low-risk Bitcoin lending and staking strategies",
-  },
-  {
-    id: "3",
-    vault: "DeFi Alpha Hunter",
-    manager: "0xabcd...efgh",
-    managerFullAddress: "0xabcdef1234567890abcdef1234567890abcdefgh",
-    amount: 15000,
-    value: 16800,
-    pnl: 1800,
-    pnlPercentage: 12.0,
-    apy: "18.7%",
-    status: "active",
-    depositDate: "2024-02-01",
-    strategy: "High-yield opportunities in emerging DeFi protocols",
-  },
-  {
-    id: "4",
-    vault: "Stablecoin Yield",
-    manager: "0x5555...7777",
-    managerFullAddress: "0x5555666677778888999900001111222233334444",
-    amount: 30000,
-    value: 30900,
-    pnl: 900,
-    pnlPercentage: 3.0,
-    apy: "6.8%",
-    status: "closed",
-    depositDate: "2024-01-10",
-    strategy: "Stable yield generation through lending protocols",
-  },
-  {
-    id: "5",
-    vault: "Arbitrage Master",
-    manager: "0x2222...8888",
-    managerFullAddress: "0x2222333344445555666677778888999900001111",
-    amount: 20000,
-    value: 21400,
-    pnl: 1400,
-    pnlPercentage: 7.0,
-    apy: "15.3%",
-    status: "active",
-    depositDate: "2024-02-05",
-    strategy: "Cross-chain arbitrage and MEV extraction",
-  },
-  {
-    id: "6",
-    vault: "Layer 2 Optimizer",
-    manager: "0x3333...9999",
-    managerFullAddress: "0x3333444455556666777788889999000011112222",
-    amount: 35000,
-    value: 37100,
-    pnl: 2100,
-    pnlPercentage: 6.0,
-    apy: "14.2%",
-    status: "locked",
-    depositDate: "2024-01-25",
-    strategy: "Optimized yield farming on Layer 2 networks",
-  },
-  {
-    id: "7",
-    vault: "NFT Yield Farm",
-    manager: "0x4444...aaaa",
-    managerFullAddress: "0x4444555566667777888899990000aaaabbbbcccc",
-    amount: 18000,
-    value: 17640,
-    pnl: -360,
-    pnlPercentage: -2.0,
-    apy: "9.8%",
-    status: "active",
-    depositDate: "2024-02-10",
-    strategy: "NFT-backed lending and yield generation",
-  },
-  {
-    id: "8",
-    vault: "Liquid Staking Pro",
-    manager: "0x6666...bbbb",
-    managerFullAddress: "0x6666777788889999000011112222333344445555",
-    amount: 42000,
-    value: 44520,
-    pnl: 2520,
-    pnlPercentage: 6.0,
-    apy: "11.8%",
-    status: "closed",
-    depositDate: "2024-01-08",
-    strategy: "Professional liquid staking strategies",
-  },
-  {
-    id: "9",
-    vault: "Meme Coin Hunter",
-    manager: "0x7777...cccc",
-    managerFullAddress: "0x7777888899990000111122223333444455556666",
-    amount: 12000,
-    value: 15600,
-    pnl: 3600,
-    pnlPercentage: 30.0,
-    apy: "45.2%",
-    status: "active",
-    depositDate: "2024-02-12",
-    strategy: "High-risk meme coin trading strategies",
-  },
-  {
-    id: "10",
-    vault: "Stable Yield Plus",
-    manager: "0x8888...dddd",
-    managerFullAddress: "0x8888999900001111222233334444555566667777",
-    amount: 28000,
-    value: 28840,
-    pnl: 840,
-    pnlPercentage: 3.0,
-    apy: "7.5%",
-    status: "locked",
-    depositDate: "2024-01-30",
-    strategy: "Enhanced stablecoin yield strategies",
-  },
-  {
-    id: "11",
-    vault: "Cross-Chain Bridge",
-    manager: "0x9999...eeee",
-    managerFullAddress: "0x9999000011112222333344445555666677778888",
-    amount: 22000,
-    value: 23320,
-    pnl: 1320,
-    pnlPercentage: 6.0,
-    apy: "13.1%",
-    status: "active",
-    depositDate: "2024-02-03",
-    strategy: "Cross-chain bridge arbitrage opportunities",
-  },
-  {
-    id: "12",
-    vault: "AI Trading Bot",
-    manager: "0xaaaa...ffff",
-    managerFullAddress: "0xaaaa1111bbbb2222cccc3333dddd4444eeee5555",
-    amount: 38000,
-    value: 40280,
-    pnl: 2280,
-    pnlPercentage: 6.0,
-    apy: "16.8%",
-    status: "active",
-    depositDate: "2024-01-18",
-    strategy: "AI-powered algorithmic trading strategies",
-  },
-  {
-    id: "13",
-    vault: "GameFi Yield",
-    manager: "0xbbbb...1111",
-    managerFullAddress: "0xbbbb2222cccc3333dddd4444eeee5555ffff6666",
-    amount: 16000,
-    value: 17440,
-    pnl: 1440,
-    pnlPercentage: 9.0,
-    apy: "19.3%",
-    status: "locked",
-    depositDate: "2024-02-07",
-    strategy: "Gaming token yield farming strategies",
-  },
-  {
-    id: "14",
-    vault: "Real World Assets",
-    manager: "0xcccc...2222",
-    managerFullAddress: "0xcccc3333dddd4444eeee5555ffff6666aaaa7777",
-    amount: 45000,
-    value: 46350,
-    pnl: 1350,
-    pnlPercentage: 3.0,
-    apy: "8.9%",
-    status: "closed",
-    depositDate: "2024-01-12",
-    strategy: "Tokenized real-world asset investments",
-  },
-  {
-    id: "15",
-    vault: "Perpetual Futures",
-    manager: "0xdddd...3333",
-    managerFullAddress: "0xdddd4444eeee5555ffff6666aaaa7777bbbb8888",
-    amount: 33000,
-    value: 31680,
-    pnl: -1320,
-    pnlPercentage: -4.0,
-    apy: "22.1%",
-    status: "active",
-    depositDate: "2024-02-14",
-    strategy: "Perpetual futures trading strategies",
-  },
-  {
-    id: "16",
-    vault: "Options Strategies",
-    manager: "0xeeee...4444",
-    managerFullAddress: "0xeeee5555ffff6666aaaa7777bbbb8888cccc9999",
-    amount: 27000,
-    value: 28890,
-    pnl: 1890,
-    pnlPercentage: 7.0,
-    apy: "17.4%",
-    status: "active",
-    depositDate: "2024-01-22",
-    strategy: "Advanced options trading strategies",
-  },
-  {
-    id: "17",
-    vault: "Yield Aggregator",
-    manager: "0xffff...5555",
-    managerFullAddress: "0xffff6666aaaa7777bbbb8888cccc9999dddd0000",
-    amount: 31000,
-    value: 32240,
-    pnl: 1240,
-    pnlPercentage: 4.0,
-    apy: "10.6%",
-    status: "locked",
-    depositDate: "2024-02-01",
-    strategy: "Multi-protocol yield aggregation",
-  },
-  {
-    id: "18",
-    vault: "Flash Loan Arbitrage",
-    manager: "0x1111...6666",
-    managerFullAddress: "0x1111777722228888333399994444aaaabbbbcccc",
-    amount: 24000,
-    value: 25440,
-    pnl: 1440,
-    pnlPercentage: 6.0,
-    apy: "15.7%",
-    status: "active",
-    depositDate: "2024-01-28",
-    strategy: "Flash loan arbitrage opportunities",
-  },
-  {
-    id: "19",
-    vault: "Governance Token Farm",
-    manager: "0x2222...7777",
-    managerFullAddress: "0x2222888833339999444400005555bbbbccccdddd",
-    amount: 19000,
-    value: 20520,
-    pnl: 1520,
-    pnlPercentage: 8.0,
-    apy: "18.9%",
-    status: "closed",
-    depositDate: "2024-02-06",
-    strategy: "Governance token farming strategies",
-  },
-  {
-    id: "20",
-    vault: "Synthetic Assets",
-    manager: "0x3333...8888",
-    managerFullAddress: "0x3333999944440000555511116666ccccddddeeee",
-    amount: 36000,
-    value: 37800,
-    pnl: 1800,
-    pnlPercentage: 5.0,
-    apy: "12.3%",
-    status: "active",
-    depositDate: "2024-01-16",
-    strategy: "Synthetic asset trading strategies",
-  },
-  {
-    id: "21",
-    vault: "Liquidity Mining Pro",
-    manager: "0x4444...9999",
-    managerFullAddress: "0x4444000055551111666622227777ddddeeeeaaaa",
-    amount: 29000,
-    value: 30740,
-    pnl: 1740,
-    pnlPercentage: 6.0,
-    apy: "14.8%",
-    status: "active",
-    depositDate: "2024-02-09",
-    strategy: "Professional liquidity mining strategies",
-  },
-  {
-    id: "22",
-    vault: "Algorithmic Stablecoin",
-    manager: "0x5555...aaaa",
-    managerFullAddress: "0x5555111166662222777733338888eeeeffff9999",
-    amount: 21000,
-    value: 20580,
-    pnl: -420,
-    pnlPercentage: -2.0,
-    apy: "11.2%",
-    status: "locked",
-    depositDate: "2024-01-26",
-    strategy: "Algorithmic stablecoin strategies",
-  },
-  {
-    id: "23",
-    vault: "Metaverse Assets",
-    manager: "0x6666...bbbb",
-    managerFullAddress: "0x6666222277773333888844449999ffffaaaa0000",
-    amount: 17000,
-    value: 18360,
-    pnl: 1360,
-    pnlPercentage: 8.0,
-    apy: "20.1%",
-    status: "active",
-    depositDate: "2024-02-11",
-    strategy: "Metaverse and virtual world investments",
-  },
-  {
-    id: "24",
-    vault: "Privacy Coin Yield",
-    manager: "0x7777...cccc",
-    managerFullAddress: "0x7777333388884444999955550000aaaabbbb1111",
-    amount: 26000,
-    value: 27040,
-    pnl: 1040,
-    pnlPercentage: 4.0,
-    apy: "9.7%",
-    status: "closed",
-    depositDate: "2024-01-31",
-    strategy: "Privacy-focused cryptocurrency strategies",
-  },
-  {
-    id: "25",
-    vault: "Institutional Grade",
-    manager: "0x8888...dddd",
-    managerFullAddress: "0x8888444499995555000066661111bbbbcccc2222",
-    amount: 55000,
-    value: 57200,
-    pnl: 2200,
-    pnlPercentage: 4.0,
-    apy: "8.1%",
-    status: "active",
-    depositDate: "2024-01-05",
-    strategy: "Institutional-grade investment strategies",
-  },
-];
+// Modal component for position details
+function PositionDetailsModal({ 
+  position, 
+  isOpen, 
+  onClose 
+}: { 
+  position: UserVaultPosition | null; 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) {
+  if (!isOpen || !position) return null;
+
+  const pnl = calculatePnL(position.current_value, position.cumulative_deposits);
+  const pnlPercentage = calculatePnLPercentage(position.current_value, position.cumulative_deposits);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white">Position Details</h2>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              ✕
+            </Button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-muted-foreground">Vault Name</label>
+                <p className="text-white font-medium">{position.vault?.vault_name || "Unknown Vault"}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Vault Type</label>
+                <p className="text-white">{position.vault?.vault_type || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Strategy</label>
+                <p className="text-white">{position.vault?.vault_strategy || "N/A"}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">APY</label>
+                <p className="text-green-400 font-medium">{formatPercentage(position.vault?.apy || 0)}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Vault Shares</label>
+                <p className="text-white">{parseFloat(position.vault_shares).toFixed(4)}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Total Deposits</label>
+                <p className="text-white">{formatCurrency(parseFloat(position.cumulative_deposits))}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Total Withdrawals</label>
+                <p className="text-white">{formatCurrency(parseFloat(position.cumulative_withdrawals))}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Current Value</label>
+                <p className="text-white font-medium">{formatCurrency(parseFloat(position.current_value))}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">PnL</label>
+                <div className={`${pnl >= 0 ? "text-profit" : "text-loss"}`}>
+                  <div className="flex items-center">
+                    {pnl >= 0 ? (
+                      <ArrowUpIcon className="mr-1 h-4 w-4" />
+                    ) : (
+                      <ArrowDownIcon className="mr-1 h-4 w-4" />
+                    )}
+                    {formatCurrency(Math.abs(pnl))} ({formatPercentage(pnlPercentage)})
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">High Water Mark</label>
+                <p className="text-white">{formatCurrency(parseFloat(position.high_water_mark))}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Fees Paid</label>
+                <p className="text-white">{formatCurrency(parseFloat(position.fees_paid))}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">First Deposit</label>
+                <p className="text-white">{formatDate(position.first_deposit_at)}</p>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Last Transaction</label>
+                <p className="text-white">{formatDate(position.last_transaction_at)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper functions
+const calculatePnL = (currentValue: string, deposits: string) => {
+  const current = parseFloat(currentValue);
+  const deposited = parseFloat(deposits);
+  return current - deposited;
+};
+
+const calculatePnLPercentage = (currentValue: string, deposits: string) => {
+  const current = parseFloat(currentValue);
+  const deposited = parseFloat(deposits);
+  if (deposited === 0) return 0;
+  return ((current - deposited) / deposited) * 100;
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatPercentage = (percentage: number) => {
+  return `${percentage.toFixed(1)}%`;
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 export default function PositionsPage() {
   const { user, loading, authenticated, login } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
-  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<UserVaultPosition | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 10;
 
-  // Calculate pagination
-  const totalItems = allPositions.length;
+  // Use the hook to fetch user vault positions
+  const {
+    positions,
+    loading: positionsLoading,
+    error,
+    hasMore,
+    loadMore,
+    refetch
+  } = useUserVaultPositions({
+    userId: user?.userId || null,
+    limit: itemsPerPage
+  });
+
+  // Calculate pagination based on current positions
+  const totalItems = positions.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const paginatedPositions = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return allPositions.slice(startIndex, endIndex);
-  }, [currentPage]);
+    return positions.slice(startIndex, endIndex);
+  }, [positions, currentPage]);
+
+  // Load more data when page changes and we need more data
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    if (startIndex >= positions.length && hasMore && !positionsLoading) {
+      loadMore();
+    }
+  }, [currentPage, positions.length, hasMore, positionsLoading, loadMore]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const copyToClipboard = async (fullAddress: string) => {
-    try {
-      await navigator.clipboard.writeText(fullAddress);
-      setCopiedAddress(fullAddress);
-      toast.success("Address copied to clipboard!");
-      setTimeout(() => setCopiedAddress(null), 2000);
-    } catch (error) {
-      console.error("Failed to copy address:", error);
-      toast.error("Failed to copy address");
-    }
+  const openDetailsModal = (position: UserVaultPosition) => {
+    setSelectedPosition(position);
+    setIsModalOpen(true);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const closeDetailsModal = () => {
+    setIsModalOpen(false);
+    setSelectedPosition(null);
   };
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage.toFixed(1)}%`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  // Check if vault is in battle (battle_id exists and battle is not completed)
+  const isVaultInBattle = (position: UserVaultPosition) => {
+    return position.vault?.battle_id !== null;
   };
 
   if (!authenticated) {
@@ -475,17 +260,11 @@ export default function PositionsPage() {
                   <th className="text-muted-foreground px-4 py-3 text-left text-sm font-medium">
                     Vault
                   </th>
-                  <th className="text-muted-foreground px-4 py-3 text-left text-sm font-medium">
-                    Manager
-                  </th>
-                  <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
-                    Amount
-                  </th>
                   <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
                     Current Value
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
-                    P&L
+                    PnL
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
                     APY
@@ -499,122 +278,131 @@ export default function PositionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedPositions.map((position) => (
-                  <tr
-                    key={position.id}
-                    className="border-border/50 hover:bg-muted/5 border-b"
-                  >
-                    <td className="px-4 py-4">
-                      <div>
-                        <div className="font-medium text-white">
-                          {position.vault}
+                {paginatedPositions.map((position) => {
+                  const pnl = calculatePnL(position.current_value, position.cumulative_deposits);
+                  const pnlPercentage = calculatePnLPercentage(position.current_value, position.cumulative_deposits);
+                  const inBattle = isVaultInBattle(position);
+                  
+                  return (
+                    <tr
+                      key={position.position_id}
+                      className="border-border/50 hover:bg-muted/5 border-b"
+                    >
+                      {/* Vault Column */}
+                      <td className="px-4 py-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            {position.vault?.vault_image ? (
+                              <Image
+                                src={position.vault.vault_image}
+                                alt={position.vault.vault_name || "Vault"}
+                                width={40}
+                                height={40}
+                                className="rounded-full"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium">
+                                  {position.vault?.vault_name?.charAt(0) || "V"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-white truncate">
+                              {position.vault?.vault_name || "Unknown Vault"}
+                            </div>
+                            <div className="text-muted-foreground text-sm truncate">
+                              {position.vault?.vault_type || "Unknown Type"}
+                            </div>
+                          </div>
                         </div>
+                      </td>
+
+                      {/* Current Value */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="text-white font-medium">
+                          {formatCurrency(parseFloat(position.current_value))}
+                        </div>
+                      </td>
+
+                      {/* PnL */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <div
+                            className={`flex items-center whitespace-nowrap ${
+                              pnl >= 0 ? "text-profit" : "text-loss"
+                            }`}
+                          >
+                            {pnl >= 0 ? (
+                              <ArrowUpIcon className="mr-1 h-4 w-4 flex-shrink-0" />
+                            ) : (
+                              <ArrowDownIcon className="mr-1 h-4 w-4 flex-shrink-0" />
+                            )}
+                            <span className="font-medium">
+                              {formatCurrency(Math.abs(pnl))}
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className={`text-right text-sm whitespace-nowrap ${
+                            pnl >= 0 ? "text-profit" : "text-loss"
+                          }`}
+                        >
+                          {formatPercentage(pnlPercentage)}
+                        </div>
+                      </td>
+
+                      {/* APY */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="text-green-400 font-medium">
+                          {formatPercentage(position.vault?.apy || 0)}
+                        </div>
+                      </td>
+
+                      {/* Deposit Date */}
+                      <td className="px-4 py-4 text-center">
                         <div className="text-muted-foreground text-sm">
-                          {position.strategy}
+                          {formatDate(position.first_deposit_at)}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-muted-foreground font-mono text-sm">
-                          {position.manager}
-                        </span>
-                        <div className="flex items-center space-x-1">
-                          <button
-                            onClick={() => copyToClipboard(position.managerFullAddress)}
-                            className="text-muted-foreground hover:text-white transition-colors cursor-pointer p-1"
-                            title={copiedAddress === position.managerFullAddress ? "Copied!" : "Copy address"}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </button>
-                          <a
-                            href={`https://solscan.io/account/${position.managerFullAddress}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-white transition-colors cursor-pointer p-1"
-                            title="View on Solscan"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="text-white">
-                        {formatCurrency(position.amount)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="text-white">
-                        {formatCurrency(position.value)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div
-                        className={`flex items-center justify-end ${
-                          position.pnl >= 0 ? "text-profit" : "text-loss"
-                        }`}
-                      >
-                        {position.pnl >= 0 ? (
-                          <ArrowUpIcon className="mr-1 h-4 w-4" />
-                        ) : (
-                          <ArrowDownIcon className="mr-1 h-4 w-4" />
-                        )}
-                        {formatCurrency(Math.abs(position.pnl))}
-                      </div>
-                      <div
-                        className={`text-right text-sm ${
-                          position.pnl >= 0 ? "text-profit" : "text-loss"
-                        }`}
-                      >
-                        {formatPercentage(position.pnlPercentage)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="text-green-400 font-medium">
-                        {position.apy}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="text-muted-foreground text-sm">
-                        {formatDate(position.depositDate)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex justify-center space-x-2">
-                        {position.status === "active" ? (
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex justify-center space-x-2">
+                          {inBattle ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-orange-400 border-orange-400/50 cursor-not-allowed"
+                              disabled
+                            >
+                              <ShieldCheckIcon className="h-4 w-4 mr-1" />
+                              In Battle
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="cursor-pointer"
+                            >
+                              Withdraw
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
                             className="cursor-pointer"
+                            onClick={() => openDetailsModal(position)}
                           >
-                            Withdraw
+                            <Eye className="h-4 w-4 mr-1" />
+                            Details
                           </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-primary cursor-not-allowed border-none"
-                            disabled
-                          >
-                            <ShieldCheckIcon className="text-primary h-4 w-4" />
-                            Locked
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="cursor-pointer"
-                          onClick={() => {
-                            window.location.href = `/vault/${position.id}`;
-                          }}
-                        >
-                          Details
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -631,6 +419,13 @@ export default function PositionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Position Details Modal */}
+      <PositionDetailsModal
+        position={selectedPosition}
+        isOpen={isModalOpen}
+        onClose={closeDetailsModal}
+      />
     </div>
   );
 }

@@ -190,6 +190,10 @@ export interface UserVaultPosition {
     vault_name: string;
     vault_address: string;
     vault_strategy: string;
+    vault_type: string;
+    vault_image: string;
+    battle_id: number | null;
+    apy: number;
   };
 }
 
@@ -470,10 +474,12 @@ class ApiService {
 
   async getUserVaultPositions(
     userId: string,
+    skip: number = 0,
+    limit: number = 10,
     token?: string
   ): Promise<UserVaultPosition[]> {
     const response = await this.request<UserVaultPosition[]>(
-      `/user-vault-position/user/${userId}`,
+      `/user-vault-position/user/${userId}?skip=${skip}&limit=${limit}`,
       {},
       token
     );
