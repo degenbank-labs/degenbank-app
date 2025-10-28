@@ -1,6 +1,12 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
+// Ensure API_BASE_URL ends with a trailing slash if needed
+const getFormattedBaseUrl = () => {
+  if (!API_BASE_URL) return "http://localhost:8080";
+  return API_BASE_URL.endsWith("/") ? API_BASE_URL : `${API_BASE_URL}/`;
+};
+
 // New API Response structure
 export interface ApiResponse<T = unknown> {
   data: T;
@@ -217,7 +223,11 @@ class ApiService {
     options: RequestInit = {},
     token?: string
   ): Promise<ApiResponse<T>> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    // Use the formatted base URL to ensure proper URL construction
+    const baseUrl = getFormattedBaseUrl();
+    // Make sure endpoint doesn't start with a slash if baseUrl ends with one
+    const formattedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const url = `${baseUrl}${formattedEndpoint}`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -236,7 +246,17 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
+      // Add timeout to fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const fetchConfig = {
+        ...config,
+        signal: controller.signal
+      };
+      
+      const response = await fetch(url, fetchConfig)
+        .finally(() => clearTimeout(timeoutId));
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -264,12 +284,31 @@ class ApiService {
       const data = await response.json();
       return data as ApiResponse<T>;
     } catch (error) {
+      // Improved error handling with more specific messages
+      let errorMessage = "API request failed";
+      
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        errorMessage = "Network error: Unable to connect to the server. Please check your internet connection or the server might be down.";
+      } else if (error instanceof DOMException && error.name === "AbortError") {
+        errorMessage = "Request timeout: The server took too long to respond.";
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       console.error("API request failed:", {
         url,
         method: config.method || "GET",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       });
-      throw error;
+      
+      // Create a structured error response
+      const apiError = {
+        data: null,
+        message: errorMessage,
+        statusCode: 0,
+      } as ApiResponse<T>;
+      
+      return apiError;
     }
   }
 
