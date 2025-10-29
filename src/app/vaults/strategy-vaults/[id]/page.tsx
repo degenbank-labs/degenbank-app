@@ -1231,23 +1231,6 @@ export default function VaultDetailPage() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <Tooltip content="The largest single-day loss experienced by your position">
-                      <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
-                        Max Daily Drawdown
-                      </span>
-                    </Tooltip>
-                    <span className="font-medium text-white">
-                      {userVaultPositionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : userVaultPosition ? (
-                        `${parseFloat(userVaultPosition.max_daily_drawdown).toFixed(2)}%`
-                      ) : (
-                        "0.00%"
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
                     <Tooltip content="The current value of your position in the vault">
                       <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
                         Current Value
@@ -1275,7 +1258,7 @@ export default function VaultDetailPage() {
 
                 {/* Right Column */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <Tooltip content="Total fees paid to the vault manager for management and performance">
                       <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
                         Fees Paid
@@ -1295,9 +1278,9 @@ export default function VaultDetailPage() {
                         )}
                       </span>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <Tooltip content="The highest value your position has reached, used to calculate performance fees">
                       <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
                         High-Water Mark
@@ -1320,9 +1303,9 @@ export default function VaultDetailPage() {
                         )}
                       </span>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <Tooltip content="Your total return percentage since first deposit">
                       <span className="cursor-help border-b border-dotted border-[#6B7280] text-sm text-[#6B7280]">
                         Total Return
@@ -1345,7 +1328,7 @@ export default function VaultDetailPage() {
                         "0.00%"
                       )}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
