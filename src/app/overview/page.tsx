@@ -113,8 +113,8 @@ export default function OverviewPage() {
       status: battle.status,
       phase: getBattlePhase(battle.battle_start, battle.battle_end),
       timeRemaining: battle.timeRemaining || "N/A",
-      totalTVL: battle.totalTVL || 0,
-      participants: battle.participants || 0,
+      totalTVL: battle.total_tvl || 0,
+      participants: 0, // Placeholder since participants property doesn't exist
     }));
   }, [battles]);
 
@@ -298,63 +298,63 @@ export default function OverviewPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
       {/* Portfolio Overview */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Portfolio Value */}
         <Card className="bg-card border-border rounded-none">
-          <CardHeader>
-            <CardDescription>Portfolio Value</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold text-white">
-              {formatCurrency(portfolioMetrics.totalValue)}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm">Portfolio Value</p>
+                <p className="text-2xl font-bold text-white">
+                  {formatCurrency(portfolioMetrics.totalValue)}
+                </p>
+              </div>
+              <div className="text-primary">
+                <ArrowUpIcon className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* All Time PnL */}
         <Card className="bg-card border-border rounded-none">
-          <CardHeader className="pb-2">
-            <CardDescription>All Time PnL</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`flex items-center text-xl font-bold ${
-                portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"
-              }`}
-            >
-              {portfolioMetrics.totalPnL >= 0 ? (
-                <ArrowUpIcon className="mr-1 h-5 w-5" />
-              ) : (
-                <ArrowDownIcon className="mr-1 h-5 w-5" />
-              )}
-              {formatCurrency(Math.abs(portfolioMetrics.totalPnL))}
-            </div>
-            <div
-              className={`text-sm ${
-                portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"
-              }`}
-            >
-              {formatPercentage(portfolioMetrics.totalPnLPercentage)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border rounded-none">
-          <CardHeader className="pb-2">
-            <CardDescription>Net 300 Volume (rolling estimate)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold text-white">
-              {formatCurrency(150000)}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm">All Time PnL</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"
+                  }`}
+                >
+                  {portfolioMetrics.totalPnL >= 0 ? "+" : ""}
+                  {formatCurrency(Math.abs(portfolioMetrics.totalPnL))}
+                </p>
+              </div>
+              <div className={portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"}>
+                {portfolioMetrics.totalPnL >= 0 ? (
+                  <ArrowUpIcon className="h-6 w-6" />
+                ) : (
+                  <ArrowDownIcon className="h-6 w-6" />
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Active Positions */}
         <Card className="bg-card border-border rounded-none">
-          <CardHeader className="pb-2">
-            <CardDescription>Active Positions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold text-white">
-              {positions.length}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-sm">Active Positions</p>
+                <p className="text-2xl font-bold text-white">
+                  {positions.length}
+                </p>
+              </div>
+              <div className="text-primary">
+                <ArrowUpIcon className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -389,215 +389,8 @@ export default function OverviewPage() {
         </Link>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Total P&L Chart - Full Height */}
-        <Card className="bg-card border-border rounded-none">
-          <CardHeader>
-            <CardTitle className="text-white">Total P&L</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                  data={totalPnLData}
-                  margin={{
-                    top: 10,
-                    right: 10,
-                    left: 10,
-                    bottom: 20,
-                  }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="totalPnLSplitColor"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.max(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) >= 0
-                            ? "#16d2a0"
-                            : "#ea3943"
-                        }
-                        stopOpacity={0.6}
-                      />
-                      <stop
-                        offset={`${100 - (totalPnLData.length > 0 ? Math.max(0, Math.min(100, ((0 - Math.min(...totalPnLData.map((d) => d.cumulativePnl))) / (Math.max(...totalPnLData.map((d) => d.cumulativePnl)) - Math.min(...totalPnLData.map((d) => d.cumulativePnl)))) * 100)) : 50)}%`}
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.max(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) >= 0
-                            ? "#16d2a0"
-                            : "#ea3943"
-                        }
-                        stopOpacity={0.001}
-                      />
-                      <stop
-                        offset={`${100 - (totalPnLData.length > 0 ? Math.max(0, Math.min(100, ((0 - Math.min(...totalPnLData.map((d) => d.cumulativePnl))) / (Math.max(...totalPnLData.map((d) => d.cumulativePnl)) - Math.min(...totalPnLData.map((d) => d.cumulativePnl)))) * 100)) : 50)}%`}
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.min(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) < 0
-                            ? "#ea3943"
-                            : "#16d2a0"
-                        }
-                        stopOpacity={0.001}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.min(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) < 0
-                            ? "#ea3943"
-                            : "#16d2a0"
-                        }
-                        stopOpacity={0.6}
-                      />
-                    </linearGradient>
-                    <linearGradient
-                      id="totalPnLStrokeGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.max(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) >= 0
-                            ? "#16d2a0"
-                            : "#ea3943"
-                        }
-                        stopOpacity={1}
-                      />
-                      <stop
-                        offset={`${100 - (totalPnLData.length > 0 ? Math.max(0, Math.min(100, ((0 - Math.min(...totalPnLData.map((d) => d.cumulativePnl))) / (Math.max(...totalPnLData.map((d) => d.cumulativePnl)) - Math.min(...totalPnLData.map((d) => d.cumulativePnl)))) * 100)) : 50)}%`}
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.max(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) >= 0
-                            ? "#16d2a0"
-                            : "#ea3943"
-                        }
-                        stopOpacity={1}
-                      />
-                      <stop
-                        offset={`${100 - (totalPnLData.length > 0 ? Math.max(0, Math.min(100, ((0 - Math.min(...totalPnLData.map((d) => d.cumulativePnl))) / (Math.max(...totalPnLData.map((d) => d.cumulativePnl)) - Math.min(...totalPnLData.map((d) => d.cumulativePnl)))) * 100)) : 50)}%`}
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.min(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) < 0
-                            ? "#ea3943"
-                            : "#16d2a0"
-                        }
-                        stopOpacity={1}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor={
-                          totalPnLData.length > 0 &&
-                          Math.min(
-                            ...totalPnLData.map((d) => d.cumulativePnl)
-                          ) < 0
-                            ? "#ea3943"
-                            : "#16d2a0"
-                        }
-                        stopOpacity={1}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#9ca3af" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#9ca3af" }}
-                    tickFormatter={(value) => formatPnL(value)}
-                    domain={[
-                      (dataMin: number) => Math.min(dataMin, 0),
-                      (dataMax: number) => Math.max(dataMax, 0),
-                    ]}
-                  />
-                  <RechartsTooltip
-                    content={({ active, payload, label }) => {
-                      if (
-                        active &&
-                        payload &&
-                        payload.length &&
-                        payload[0]?.payload
-                      ) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="border border-neutral-800 bg-neutral-900/95 p-3 shadow-xl backdrop-blur-sm">
-                            <p className="mb-2 text-xs text-gray-300">
-                              {label}
-                            </p>
-                            <div className="space-y-1">
-                              <p className="text-sm font-semibold text-white">
-                                Cumulative P&L:
-                                <span
-                                  className={`ml-1 ${data.cumulativePnl >= 0 ? "text-profit" : "text-loss"}`}
-                                >
-                                  {formatPnL(data.cumulativePnl)}
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <ReferenceLine
-                    y={0}
-                    stroke="#6b7280"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                    opacity={0.8}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="cumulativePnl"
-                    stroke="url(#totalPnLStrokeGradient)"
-                    strokeWidth={2}
-                    fillOpacity={0.6}
-                    fill="url(#totalPnLSplitColor)"
-                    dot={false}
-                    activeDot={{
-                      r: 4,
-                      stroke: "#ffffff",
-                      strokeWidth: 2,
-                      fill: "#000",
-                    }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Positions Table - Smaller fonts, no manager */}
-        <Card className="bg-card border-border rounded-none">
+      {/* Positions Table */}
+      <Card className="bg-card border-border rounded-none">
           <CardHeader>
             <CardTitle className="text-sm">Positions</CardTitle>
             <CardDescription className="text-xs">
@@ -774,7 +567,6 @@ export default function OverviewPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Available Vaults and Battle Arenas - Table Format */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
