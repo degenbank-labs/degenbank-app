@@ -27,8 +27,8 @@ const cirkaVariable = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Hackathon Mode",
-  description: "A hackathon template with Privy.io authentication",
+  title: "Degen Banx",
+  description: "Banking, but make it DEGEN.",
 };
 
 export default function RootLayout({
