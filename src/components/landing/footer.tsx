@@ -35,20 +35,7 @@ export function Footer() {
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() =>
-                    handleExternalLink("https://discord.gg/degenbank")
-                  }
-                  className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 transition-colors duration-200 hover:bg-transparent hover:text-black"
-                >
-                  <MessageCircle size={16} />
-                  Discord
-                </Button>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={() =>
-                    handleExternalLink("https://twitter.com/degenbank")
-                  }
+                  onClick={() => handleExternalLink("https://x.com/DegenBanx")}
                   className="flex cursor-pointer items-center gap-2 px-0 text-sm text-black/80 transition-colors duration-200 hover:bg-transparent hover:text-black"
                 >
                   <Twitter size={16} />X / Twitter
