@@ -57,23 +57,88 @@ export function getVaultStatus(
  * Calculates time remaining until a specific timestamp
  */
 export function calculateTimeRemaining(targetDate: string): string {
-  const now = new Date();
-  const target = new Date(targetDate);
-  const diff = target.getTime() - now.getTime();
+  try {
+    // Handle null, undefined, or empty string
+    if (!targetDate || targetDate.trim() === '') {
+      return "No date";
+    }
+    
+    // Ensure we have a string
+    if (typeof targetDate !== 'string') {
+      return "Invalid date format";
+    }
+    
+    const now = new Date();
+    const target = new Date(targetDate.trim());
+    
+    // Validate the parsed date
+    if (isNaN(target.getTime())) {
+      // Try alternative parsing for common formats
+      const alternativeTarget = new Date(targetDate.replace(/\s+/g, 'T'));
+      if (isNaN(alternativeTarget.getTime())) {
+        return "Invalid date";
+      }
+      // Use the alternative if it worked
+      const altDiff = alternativeTarget.getTime() - now.getTime();
+      if (altDiff <= 0) return "Ended";
+      
+      const altDays = Math.floor(altDiff / (1000 * 60 * 60 * 24));
+      const altHours = Math.floor((altDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const altMinutes = Math.floor((altDiff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (altDays > 0) {
+        return `${altDays}d ${altHours}h ${altMinutes}m`;
+      } else if (altHours > 0) {
+        return `${altHours}h ${altMinutes}m`;
+      } else if (altMinutes > 0) {
+        return `${altMinutes}m`;
+      } else {
+        return "Less than 1m";
+      }
+    }
+    
+    const diff = target.getTime() - now.getTime();
 
-  if (diff <= 0) return "Ended";
+    // If the target date is in the past
+    if (diff <= 0) return "Ended";
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-  if (days > 0) {
-    return `${days}d ${hours}h ${minutes}m`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else {
-    return `${minutes}m`;
+    // Format the output based on the time remaining
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return "Less than 1m";
+    }
+  } catch (error) {
+    return "Error";
   }
+}
+
+/**
+ * Formats time remaining with better readability for UI display
+ */
+export function formatTimeRemaining(targetDate: string): string {
+  const timeRemaining = calculateTimeRemaining(targetDate);
+  
+  // Handle special cases - don't format these
+  if (timeRemaining === "Ended" || 
+      timeRemaining === "Invalid date" || 
+      timeRemaining === "Invalid date format" ||
+      timeRemaining === "No date" ||
+      timeRemaining === "Error" ||
+      timeRemaining === "Less than 1m") {
+    return timeRemaining;
+  }
+  
+  // Add spacing for better readability (e.g., "5d 2h 30m" -> "5 d 2 h 30 m")
+  return timeRemaining.replace(/(\d+)([dhm])/g, '$1 $2');
 }
 
 /**
@@ -97,9 +162,9 @@ export function getBattlePhases(battleStart: string, battleEnd: string) {
 
       // Calculate duration based on current phase
       if (phase.key === "Stake Phase") {
-        duration = calculateTimeRemaining(battleStart);
+        duration = ""; // No duration display for Stake Phase
       } else if (phase.key === "Battle Phase") {
-        duration = calculateTimeRemaining(battleEnd);
+        duration = formatTimeRemaining(battleEnd);
       } else {
         duration = "Completed";
       }
@@ -112,7 +177,7 @@ export function getBattlePhases(battleStart: string, battleEnd: string) {
       duration = "Completed";
     } else {
       status = "pending";
-      duration = "Pending";
+      duration = ""; // No duration display for pending phases
     }
 
     return { ...phase, status, duration };

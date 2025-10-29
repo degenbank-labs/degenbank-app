@@ -79,7 +79,7 @@ export default function BattleArenaPage() {
       0
     );
     const totalParticipants = allArenas.reduce(
-      (sum, arena) => sum + arena.participants,
+      (sum, arena) => sum + arena.total_participants,
       0
     );
 
@@ -410,29 +410,19 @@ export default function BattleArenaPage() {
                             <div>
                               <p className="text-white/60">Total TVL</p>
                               <p className="font-bold text-white">
-                                ${(currentArena.totalTVL / 1000).toFixed(0)}K
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-white/60">Prize Pool</p>
-                              <p className="font-bold text-white">
-                                $
-                                {(
-                                  (currentArena.prize_pool || 0) / 1000
-                                ).toFixed(0)}
-                                K
+                                ${(currentArena.total_tvl / 1000).toFixed(0)}K
                               </p>
                             </div>
                             <div>
                               <p className="text-white/60">Active Vaults</p>
                               <p className="font-bold text-white">
-                                {currentArena.activeVaults}
+                                {currentArena.active_vaults}
                               </p>
                             </div>
                             <div>
                               <p className="text-white/60">Participants</p>
                               <p className="font-bold text-white">
-                                {currentArena.participants}
+                                {currentArena.total_participants}
                               </p>
                             </div>
                           </div>

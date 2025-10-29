@@ -135,6 +135,8 @@ export interface Battle {
   arena_color: string | null;
   status: "open_deposit" | "ongoing_battle" | "completed";
   vaults?: Vault[];
+  total_participants: number;
+  total_tvl: number;
 }
 
 export interface GetBattlesResponse {
@@ -219,8 +221,6 @@ export interface UserVaultPosition {
   };
 }
 
-
-
 // Deposit request interface
 export interface DepositRequest {
   amount: number;
@@ -272,7 +272,9 @@ class ApiService {
     // Use the formatted base URL to ensure proper URL construction
     const baseUrl = getFormattedBaseUrl();
     // Make sure endpoint doesn't start with a slash if baseUrl ends with one
-    const formattedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const formattedEndpoint = endpoint.startsWith("/")
+      ? endpoint.substring(1)
+      : endpoint;
     const url = `${baseUrl}${formattedEndpoint}`;
 
     const headers: Record<string, string> = {
@@ -295,14 +297,15 @@ class ApiService {
       // Add timeout to fetch request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-      
+
       const fetchConfig = {
         ...config,
-        signal: controller.signal
+        signal: controller.signal,
       };
-      
-      const response = await fetch(url, fetchConfig)
-        .finally(() => clearTimeout(timeoutId));
+
+      const response = await fetch(url, fetchConfig).finally(() =>
+        clearTimeout(timeoutId)
+      );
 
       if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -332,21 +335,22 @@ class ApiService {
     } catch (error) {
       // Improved error handling with more specific messages
       let errorMessage = "API request failed";
-      
+
       if (error instanceof TypeError && error.message === "Failed to fetch") {
-        errorMessage = "Network error: Unable to connect to the server. Please check your internet connection or the server might be down.";
+        errorMessage =
+          "Network error: Unable to connect to the server. Please check your internet connection or the server might be down.";
       } else if (error instanceof DOMException && error.name === "AbortError") {
         errorMessage = "Request timeout: The server took too long to respond.";
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       console.error("API request failed:", {
         url,
         method: config.method || "GET",
         error: errorMessage,
       });
-      
+
       // Throw the error instead of returning a structured response
       throw new Error(errorMessage);
     }
@@ -503,10 +507,10 @@ class ApiService {
     const response = await this.request<GetBattleCommentsResponse>(
       `comments/battle/${battleId}/comments`
     );
-    
+
     // Handle different possible response structures
     let comments: BattleComment[] = [];
-    
+
     if (response.data) {
       // If response.data has a 'data' property (nested structure)
       if (response.data.data && Array.isArray(response.data.data)) {
@@ -517,7 +521,7 @@ class ApiService {
         comments = response.data as BattleComment[];
       }
     }
-    
+
     return comments;
   }
 
@@ -671,10 +675,7 @@ class ApiService {
     return response.data;
   }
 
-  async getTxHistoryById(
-    txId: string,
-    token?: string
-  ): Promise<UserTxHistory> {
+  async getTxHistoryById(txId: string, token?: string): Promise<UserTxHistory> {
     const response = await this.request<UserTxHistory>(
       `/user-tx-history/${txId}`,
       {},

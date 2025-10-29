@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { apiService } from "@/lib/api";
 import { Battle } from "@/lib/api";
-import { calculateTimeRemaining } from "@/utils/battleStatus";
+import { formatTimeRemaining } from "@/utils/battleStatus";
 
 // Extended interface for frontend display - using backend data with computed fields
 export interface BattleWithMetrics extends Battle {
   // Computed frontend-specific fields only
   timeRemaining: string; // computed from battle_end
-  totalTVL: number; // computed from vaults data
-  activeVaults: number; // computed from vaults data
-  participants: number; // computed from vaults data
+  total_tvl: number; // computed from vaults data
+  active_vaults: number; // computed from vaults data
+  total_participants: number; // computed from vaults data
   cubePosition: { row: number; col: number }; // for UI positioning
 }
 
@@ -45,11 +45,11 @@ export function useBattles() {
           (battle: Battle, index: number) => ({
             ...battle,
             // Only add computed frontend fields
-            timeRemaining: calculateTimeRemaining(battle.battle_end),
+            timeRemaining: formatTimeRemaining(battle.battle_end),
             // Calculate from vaults data or use defaults if no vaults
-            totalTVL: 0, // TODO: Get from separate API endpoint
-            activeVaults: battle.vaults?.length || 0,
-            participants: 0, // TODO: Get from separate API endpoint
+            total_tvl: battle.total_tvl || 0,
+            active_vaults: battle.vaults?.length || 0,
+            total_participants: battle.total_participants || 0,
             cubePosition: {
               row: Math.floor(index / 2),
               col: index % 2,
@@ -68,11 +68,11 @@ export function useBattles() {
           0
         );
         const totalParticipants = transformedBattles.reduce(
-          (sum, b) => sum + b.participants,
+          (sum, b) => sum + b.total_participants,
           0
         );
         const totalTVL = transformedBattles.reduce(
-          (sum, b) => sum + b.totalTVL,
+          (sum, b) => sum + b.total_tvl,
           0
         );
 
@@ -91,31 +91,32 @@ export function useBattles() {
     }
   };
 
-  const getBattleById = useCallback(async (
-    battleId: string
-  ): Promise<BattleWithMetrics | null> => {
-    try {
-      const battle = await apiService.getBattle(battleId);
+  const getBattleById = useCallback(
+    async (battleId: string): Promise<BattleWithMetrics | null> => {
+      try {
+        const battle = await apiService.getBattle(battleId);
 
-      if (battle) {
-        return {
-          ...battle,
-          // Only add computed frontend fields
-          timeRemaining: calculateTimeRemaining(battle.battle_end),
-          // Calculate from vaults data or use defaults if no vaults
-          totalTVL: 0, // TODO: Get from separate API endpoint
-          activeVaults: battle.vaults?.length || 0,
-          participants: 0, // TODO: Get from separate API endpoint
-          cubePosition: { row: 0, col: 0 },
-        };
+        if (battle) {
+          return {
+            ...battle,
+            // Only add computed frontend fields
+            timeRemaining: formatTimeRemaining(battle.battle_end),
+            // Calculate from vaults data or use defaults if no vaults
+            total_tvl: battle.total_tvl || 0, // TODO: Get from separate API endpoint
+            active_vaults: battle.vaults?.length || 0,
+            total_participants: battle.total_participants || 0, // TODO: Get from separate API endpoint
+            cubePosition: { row: 0, col: 0 },
+          };
+        }
+
+        return null;
+      } catch (err) {
+        console.error("Error fetching battle:", err);
+        throw err;
       }
-
-      return null;
-    } catch (err) {
-      console.error("Error fetching battle:", err);
-      throw err;
-    }
-  }, []); // Empty dependency array since this function doesn't depend on any state
+    },
+    []
+  ); // Empty dependency array since this function doesn't depend on any state
 
   const refreshBattles = () => {
     fetchBattles();

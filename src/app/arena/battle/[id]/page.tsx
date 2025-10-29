@@ -405,9 +405,8 @@ export default function BattleDetailPage() {
                   <CardContent className="space-y-4">
                     <div className="flex justify-between">
                       <span className="text-white/60">Total TVL</span>
-                      <span className="font-bold text-white">
-                        {/* TODO: Replace with actual total TVL from backend */}
-                        $ 0K
+                      <span className="text-primary font-bold">
+                        ${battle?.total_tvl || 0}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -419,16 +418,7 @@ export default function BattleDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-white/60">Total Stakers</span>
                       <span className="font-bold text-white">
-                        {/* TODO: Replace with actual total participants from backend */}
-                        0
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-white/20 pt-3">
-                      <span className="text-primary font-semibold">
-                        Prize Pool
-                      </span>
-                      <span className="text-primary text-lg font-bold">
-                        ${((battle?.prize_pool || 0) / 1000).toFixed(1)}K
+                        {battle?.total_participants || 0}
                       </span>
                     </div>
                     <div className="flex justify-between">
