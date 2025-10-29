@@ -142,6 +142,21 @@ export interface GetBattlesResponse {
   total: number;
 }
 
+// Battle Comment interfaces
+export interface BattleComment {
+  comment_id: number;
+  battle_id: number;
+  commentator: string;
+  comment: string;
+  comment_at: string; // Date as ISO string
+}
+
+export interface GetBattleCommentsResponse {
+  data: BattleComment[];
+  message: string;
+  statusCode: number;
+}
+
 // Manager interfaces
 export interface Manager {
   manager_id: string;
@@ -454,6 +469,28 @@ class ApiService {
       `/battle?skip=${skip}&limit=${limit}`
     );
     return response.data;
+  }
+
+  async getBattleComments(battleId: string | number): Promise<BattleComment[]> {
+    const response = await this.request<GetBattleCommentsResponse>(
+      `comments/battle/${battleId}/comments`
+    );
+    
+    // Handle different possible response structures
+    let comments: BattleComment[] = [];
+    
+    if (response.data) {
+      // If response.data has a 'data' property (nested structure)
+      if (response.data.data && Array.isArray(response.data.data)) {
+        comments = response.data.data;
+      }
+      // If response.data is directly an array (fallback)
+      else if (Array.isArray(response.data)) {
+        comments = response.data as BattleComment[];
+      }
+    }
+    
+    return comments;
   }
 
   // Manager API methods

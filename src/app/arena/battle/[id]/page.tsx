@@ -17,6 +17,8 @@ import {
 import { Swords } from "lucide-react";
 import { useBattles } from "@/hooks/useBattles";
 import { useBattleVaults } from "@/hooks/useBattleVaults";
+import { useBattleComments } from "@/hooks/useBattleComments";
+import { BattleCommentary } from "@/components/battle-commentary";
 import { getBattlePhases, getBattlePhase } from "@/utils/battleStatus";
 
 export default function BattleDetailPage() {
@@ -24,6 +26,9 @@ export default function BattleDetailPage() {
   const router = useRouter();
   const battleId = params.id as string;
   const [selectedVault, setSelectedVault] = useState<string | null>(null);
+
+  // Debug: Log battleId
+  console.log('BattleDetailPage - battleId:', battleId, 'type:', typeof battleId);
 
   // Use battles hook for real data
   const { getBattleById, error } = useBattles();
@@ -37,6 +42,13 @@ export default function BattleDetailPage() {
     loading: vaultsLoading,
     error: vaultsError,
   } = useBattleVaults(battleId);
+
+  // Use battle comments hook for AI commentary
+  const {
+    comments: battleComments,
+    loading: commentsLoading,
+    error: commentsError,
+  } = useBattleComments(battleId);
 
   useEffect(() => {
     const fetchBattle = async () => {
@@ -430,31 +442,11 @@ export default function BattleDetailPage() {
                 </Card>
 
                 {/* AI Commentary */}
-                <Card className="bg-card/50 border-border/50 rounded-none backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-white">
-                      <span className="font-bold text-white">
-                        Battle Commentary
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3 text-sm">
-                      <p className="text-white/80 italic">
-                        &ldquo;
-                        <span className="text-green-400">Solana DCA</span>{" "}
-                        dominates with{" "}
-                        <span className="text-primary">15.2% gains</span>, while{" "}
-                        <span className="text-blue-400">Raydium DCA</span>{" "}
-                        trails at <span className="text-blue-400">9.5%</span> —
-                        the gap widens as the battle intensifies!&rdquo;
-                      </p>
-                      <p className="text-primary/80 text-xs font-semibold">
-                        AI Battle Analyst • Live Updates
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <BattleCommentary
+                  comments={battleComments}
+                  loading={commentsLoading}
+                  error={commentsError}
+                />
               </div>
             </div>
           </div>
