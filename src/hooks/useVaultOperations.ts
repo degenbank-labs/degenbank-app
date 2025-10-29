@@ -186,15 +186,6 @@ export const useVaultOperations = () => {
     return null;
   }, [privyUser, wallets]);
 
-  // Get connected Solana wallet (for backward compatibility)
-  const getConnectedWallet = useCallback(() => {
-    const address = getWalletAddress();
-    if (!address) return null;
-
-    // Return a wallet-like object
-    return { address };
-  }, [getWalletAddress]);
-
   // Get user's public key
   const getUserPublicKey = useCallback(() => {
     const address = getWalletAddress();
@@ -203,48 +194,6 @@ export const useVaultOperations = () => {
     }
     return new PublicKey(address);
   }, [authenticated, getWalletAddress]);
-
-  // Create vault token mint if it doesn't exist
-  const createVaultTokenMint = useCallback(
-    async (
-      vaultPubkey: PublicKey,
-      userPubkey: PublicKey
-    ): Promise<{
-      mintKeypair: Keypair;
-      instructions: TransactionInstruction[];
-    }> => {
-      const mintKeypair = Keypair.generate();
-      const vtokenAuthority = vaultPubkey;
-
-      const instructions: TransactionInstruction[] = [];
-
-      // Create mint account
-      instructions.push(
-        SystemProgram.createAccount({
-          fromPubkey: userPubkey,
-          newAccountPubkey: mintKeypair.publicKey,
-          space: MINT_SIZE,
-          lamports:
-            await connection.getMinimumBalanceForRentExemption(MINT_SIZE),
-          programId: TOKEN_PROGRAM_ID,
-        })
-      );
-
-      // Initialize mint with vault authority as mint authority
-      instructions.push(
-        createInitializeMintInstruction(
-          mintKeypair.publicKey,
-          9, // decimals
-          vtokenAuthority, // mint authority
-          vtokenAuthority, // freeze authority
-          TOKEN_PROGRAM_ID
-        )
-      );
-
-      return { mintKeypair, instructions };
-    },
-    []
-  );
 
   // Create deposit instruction
   const createDepositInstruction = useCallback(
@@ -351,8 +300,6 @@ export const useVaultOperations = () => {
     },
     [program]
   );
-
-  const { signAndSendTransaction } = useSignAndSendTransaction();
 
   // Send and confirm transaction using Privy's signAndSendTransaction hook
   const sendTransaction = useCallback(
@@ -541,9 +488,6 @@ export const useVaultOperations = () => {
           // Note: Vault status validation is handled by backend
         }
 
-        // Get PDAs and token accounts
-        const vtokenAuthority = vaultPubkey;
-
         // Get all required token accounts
         const depositorTokenAccount = await getAssociatedTokenAddress(
           TOKEN_MINT,
@@ -554,9 +498,6 @@ export const useVaultOperations = () => {
           vaultTokenMint,
           userPubkey
         );
-
-        // According to IDL, vtoken_account should be the vault token mint itself
-        const vtokenAccount = vaultTokenMint;
 
         // Validate vault_token_address before creating PublicKey
         let vaultTokenAccount: PublicKey;
@@ -827,6 +768,7 @@ export const useVaultOperations = () => {
               const depositData = {
                 amount: amount,
                 shares_received: sharesReceived,
+                tx_hash: signature,
               };
 
               await apiService.recordDeposit(
@@ -955,64 +897,73 @@ export const useVaultOperations = () => {
         const signature = await sendTransaction(transaction);
 
         // Success: record withdrawal in backend and set state
-        try {
-          // Get access token for backend authentication
-          const accessToken = await getAccessToken();
+        // Get access token for backend authentication
+        const accessToken = await getAccessToken();
 
-          // Use user from useAuth context, fallback to creating user data from privyUser if needed
-          let currentUser = user;
+        // Use user from useAuth context, fallback to creating user data from privyUser if needed
+        let currentUser = user;
 
-          // If user from useAuth is not available yet, try to get/create user using wallet address
-          if (!currentUser && privyUser && accessToken) {
-            try {
-              // Get wallet address from connected wallets
-              const connectedWallet = wallets.find((wallet) => wallet.address);
-              const walletAddress = connectedWallet?.address;
+        // If user from useAuth is not available yet, try to get/create user using wallet address
+        if (!currentUser && privyUser && accessToken) {
+          try {
+            // Get wallet address from connected wallets
+            const connectedWallet = wallets.find((wallet) => wallet.address);
+            const walletAddress = connectedWallet?.address;
 
-              if (walletAddress) {
-                currentUser = await apiService.getUser(walletAddress);
+            if (walletAddress) {
+              currentUser = await apiService.getUser(walletAddress);
+            }
+          } catch (lookupError) {
+            console.log(
+              "Could not lookup user by wallet address:",
+              lookupError
+            );
+          }
+        }
+
+        // Record withdrawal in backend if we have user and access token
+        if (currentUser?.userId && accessToken) {
+          try {
+            // For now, assume shares_burned equals amount (1:1 ratio)
+            // In a real implementation, this should be calculated based on vault's share price
+            const sharesBurned = amount;
+
+            const withdrawalData = {
+              amount: amount,
+              shares_burned: sharesBurned,
+              tx_hash: signature,
+            };
+
+            await apiService.recordWithdrawal(
+              currentUser.userId.toString(),
+              vaultId,
+              withdrawalData,
+              accessToken
+            );
+          } catch (backendError) {
+            console.error("Backend withdrawal recording failed:", backendError);
+            
+            // Re-throw specific validation errors that should fail the entire operation
+            if (backendError instanceof Error) {
+              const errorMessage = backendError.message;
+              if (
+                errorMessage.includes("User vault position not found") ||
+                errorMessage.includes("Withdrawals are only allowed after battle completion") ||
+                errorMessage.includes("You don't have any open position")
+              ) {
+                throw backendError;
               }
-            } catch (lookupError) {
-              console.log(
-                "Could not lookup user by wallet address:",
-                lookupError
-              );
             }
+            
+            // For other backend errors, log but don't fail the entire operation
+            // since the Solana transaction was successful
+            console.warn("Backend sync failed but Solana transaction succeeded:", backendError);
           }
-
-          // Record withdrawal in backend if we have user and access token
-          if (currentUser?.userId && accessToken) {
-            try {
-              // For now, assume shares_burned equals amount (1:1 ratio)
-              // In a real implementation, this should be calculated based on vault's share price
-              const sharesBurned = amount;
-
-              const withdrawalData = {
-                amount: amount,
-                shares_burned: sharesBurned,
-              };
-
-              await apiService.recordWithdrawal(
-                currentUser.userId.toString(),
-                vaultId,
-                withdrawalData,
-                accessToken
-              );
-            } catch (backendError) {
-              console.error(
-                "Failed to record withdrawal in backend:",
-                backendError
-              );
-            }
-          } else {
-            console.log("Skipping backend withdrawal recording:", {
-              hasUser: !!currentUser?.userId,
-              hasAccessToken: !!accessToken,
-            });
-          }
-        } catch (syncError) {
-          console.error("Error during backend sync:", syncError);
-          // Don't fail the entire operation if backend sync fails
+        } else {
+          console.log("Skipping backend withdrawal recording:", {
+            hasUser: !!currentUser?.userId,
+            hasAccessToken: !!accessToken,
+          });
         }
 
         setWithdrawState({
@@ -1025,8 +976,30 @@ export const useVaultOperations = () => {
         showSuccessModal(signature, "withdraw", amount);
         return { success: true, signature };
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Withdrawal failed";
+        let errorMessage = "Withdrawal failed";
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+
+          // Provide more user-friendly messages for specific error patterns
+          if (errorMessage.includes("User vault position not found")) {
+            errorMessage = "You don't have any open position in this vault";
+          } else if (
+            errorMessage.includes(
+              "Withdrawals are only allowed after battle completion"
+            )
+          ) {
+            errorMessage =
+              "Withdrawals are only allowed after the battle is completed";
+          } else if (
+            errorMessage.includes("You don't have any open position")
+          ) {
+            errorMessage = "You don't have any open position in this vault";
+          } else if (errorMessage.includes("Vault not found")) {
+            errorMessage = "Vault not found or vault address is missing";
+          }
+        }
+
         setWithdrawState({
           isLoading: false,
           error: errorMessage,

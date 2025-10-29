@@ -187,6 +187,7 @@ export interface UserVaultPosition {
   fees_paid: string;
   max_daily_drawdown: string;
   total_return_percentage: string;
+  tx_hash: string | null;
   first_deposit_at: string;
   last_transaction_at: string;
   created_at: string;
@@ -209,12 +210,14 @@ export interface UserVaultPosition {
 export interface DepositRequest {
   amount: number;
   shares_received: number;
+  tx_hash: string;
 }
 
 // Withdrawal request interface
 export interface WithdrawalRequest {
   amount: number;
   shares_burned: number;
+  tx_hash: string;
 }
 
 class ApiService {
@@ -301,14 +304,8 @@ class ApiService {
         error: errorMessage,
       });
       
-      // Create a structured error response
-      const apiError = {
-        data: null,
-        message: errorMessage,
-        statusCode: 0,
-      } as ApiResponse<T>;
-      
-      return apiError;
+      // Throw the error instead of returning a structured response
+      throw new Error(errorMessage);
     }
   }
 

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserVaultPositions } from "@/hooks/useUserVaultPositions";
 import {
   ArrowUpIcon,
   PlusIcon,
@@ -18,277 +19,110 @@ import {
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
-// Extended dummy data for transaction history with profit/loss and full hashes
-const transactionHistory = [
-  {
-    id: "1",
-    type: "deposit",
-    vault: "ETH Yield Maximizer",
-    amount: 50000,
-    hash: "0x1234567890abcdef1234567890abcdef12345678",
-    hashFull: "0x1234567890abcdef1234567890abcdef12345678",
-    timestamp: "2024-01-15T10:30:00Z",
-    status: "completed",
-    fee: 25,
-    pnl: 2500,
-    pnlPercentage: 5.0,
-  },
-  {
-    id: "2",
-    type: "withdrawal",
-    vault: "BTC Conservative",
-    amount: 5000,
-    hash: "0xabcdef1234567890abcdef1234567890abcdef12",
-    hashFull: "0xabcdef1234567890abcdef1234567890abcdef12",
-    timestamp: "2024-01-20T14:45:00Z",
-    status: "completed",
-    fee: 15,
-    pnl: -250,
-    pnlPercentage: -5.0,
-  },
-  {
-    id: "3",
-    type: "deposit",
-    vault: "DeFi Alpha Hunter",
-    amount: 15000,
-    hash: "0x9876543210fedcba9876543210fedcba98765432",
-    hashFull: "0x9876543210fedcba9876543210fedcba98765432",
-    timestamp: "2024-02-01T09:15:00Z",
-    status: "completed",
-    fee: 30,
-    pnl: 1800,
-    pnlPercentage: 12.0,
-  },
-  {
-    id: "4",
-    type: "reinvest",
-    vault: "ETH Yield Maximizer",
-    amount: 2500,
-    hash: "0xfedcba0987654321fedcba0987654321fedcba09",
-    hashFull: "0xfedcba0987654321fedcba0987654321fedcba09",
-    timestamp: "2024-02-05T16:20:00Z",
-    status: "completed",
-    fee: 12,
-    pnl: 375,
-    pnlPercentage: 15.0,
-  },
-  {
-    id: "5",
-    type: "deposit",
-    vault: "Stablecoin Yield",
-    amount: 30000,
-    hash: "0x1111222233334444555566667777888899990000",
-    hashFull: "0x1111222233334444555566667777888899990000",
-    timestamp: "2024-01-10T11:00:00Z",
-    status: "completed",
-    fee: 20,
-    pnl: 900,
-    pnlPercentage: 3.0,
-  },
-  {
-    id: "6",
-    type: "withdrawal",
-    vault: "DeFi Alpha Hunter",
-    amount: 1000,
-    hash: "0x5555666677778888999900001111222233334444",
-    hashFull: "0x5555666677778888999900001111222233334444",
-    timestamp: "2024-02-10T13:30:00Z",
-    status: "pending",
-    fee: 8,
-    pnl: -120,
-    pnlPercentage: -12.0,
-  },
-  {
-    id: "7",
-    type: "deposit",
-    vault: "Arbitrage Master",
-    amount: 20000,
-    hash: "0x9999aaaabbbbccccddddeeeeffffaaaa11112222",
-    hashFull: "0x9999aaaabbbbccccddddeeeeffffaaaa11112222",
-    timestamp: "2024-02-05T08:45:00Z",
-    status: "completed",
-    fee: 25,
-    pnl: 1400,
-    pnlPercentage: 7.0,
-  },
-  {
-    id: "8",
-    type: "withdrawal",
-    vault: "Layer 2 Optimizer",
-    amount: 8500,
-    hash: "0x3333444455556666777788889999000011112222",
-    hashFull: "0x3333444455556666777788889999000011112222",
-    timestamp: "2024-02-08T12:15:00Z",
-    status: "completed",
-    fee: 18,
-    pnl: -340,
-    pnlPercentage: -4.0,
-  },
-  {
-    id: "9",
-    type: "deposit",
-    vault: "NFT Yield Farm",
-    amount: 12000,
-    hash: "0x4444555566667777888899990000aaaabbbbcccc",
-    hashFull: "0x4444555566667777888899990000aaaabbbbcccc",
-    timestamp: "2024-02-12T09:30:00Z",
-    status: "completed",
-    fee: 22,
-    pnl: 2400,
-    pnlPercentage: 20.0,
-  },
-  {
-    id: "10",
-    type: "reinvest",
-    vault: "Liquid Staking Pro",
-    amount: 6000,
-    hash: "0x6666777788889999000011112222333344445555",
-    hashFull: "0x6666777788889999000011112222333344445555",
-    timestamp: "2024-02-14T16:45:00Z",
-    status: "completed",
-    fee: 15,
-    pnl: 720,
-    pnlPercentage: 12.0,
-  },
-  {
-    id: "11",
-    type: "withdrawal",
-    vault: "Meme Coin Hunter",
-    amount: 3500,
-    hash: "0x7777888899990000111122223333444455556666",
-    hashFull: "0x7777888899990000111122223333444455556666",
-    timestamp: "2024-02-16T11:20:00Z",
-    status: "failed",
-    fee: 10,
-    pnl: -875,
-    pnlPercentage: -25.0,
-  },
-  {
-    id: "12",
-    type: "deposit",
-    vault: "Stable Yield Plus",
-    amount: 25000,
-    hash: "0x8888999900001111222233334444555566667777",
-    hashFull: "0x8888999900001111222233334444555566667777",
-    timestamp: "2024-02-18T14:10:00Z",
-    status: "completed",
-    fee: 28,
-    pnl: 750,
-    pnlPercentage: 3.0,
-  },
-  {
-    id: "13",
-    type: "withdrawal",
-    vault: "Cross-Chain Bridge",
-    amount: 4200,
-    hash: "0x9999000011112222333344445555666677778888",
-    hashFull: "0x9999000011112222333344445555666677778888",
-    timestamp: "2024-02-20T10:05:00Z",
-    status: "pending",
-    fee: 12,
-    pnl: -210,
-    pnlPercentage: -5.0,
-  },
-  {
-    id: "14",
-    type: "deposit",
-    vault: "AI Trading Bot",
-    amount: 18000,
-    hash: "0xaaaa1111bbbb2222cccc3333dddd4444eeee5555",
-    hashFull: "0xaaaa1111bbbb2222cccc3333dddd4444eeee5555",
-    timestamp: "2024-02-22T13:25:00Z",
-    status: "completed",
-    fee: 24,
-    pnl: 1980,
-    pnlPercentage: 11.0,
-  },
-  {
-    id: "15",
-    type: "reinvest",
-    vault: "GameFi Yield",
-    amount: 7500,
-    hash: "0xbbbb2222cccc3333dddd4444eeee5555ffff6666",
-    hashFull: "0xbbbb2222cccc3333dddd4444eeee5555ffff6666",
-    timestamp: "2024-02-24T15:40:00Z",
-    status: "completed",
-    fee: 16,
-    pnl: 1125,
-    pnlPercentage: 15.0,
-  },
-  {
-    id: "16",
-    type: "withdrawal",
-    vault: "Real World Assets",
-    amount: 9800,
-    hash: "0xcccc3333dddd4444eeee5555ffff6666aaaa7777",
-    hashFull: "0xcccc3333dddd4444eeee5555ffff6666aaaa7777",
-    timestamp: "2024-02-26T08:15:00Z",
-    status: "completed",
-    fee: 20,
-    pnl: -294,
-    pnlPercentage: -3.0,
-  },
-  {
-    id: "17",
-    type: "deposit",
-    vault: "Perpetual Futures",
-    amount: 14000,
-    hash: "0xdddd4444eeee5555ffff6666aaaa7777bbbb8888",
-    hashFull: "0xdddd4444eeee5555ffff6666aaaa7777bbbb8888",
-    timestamp: "2024-02-28T12:50:00Z",
-    status: "completed",
-    fee: 26,
-    pnl: 2800,
-    pnlPercentage: 20.0,
-  },
-  {
-    id: "18",
-    type: "withdrawal",
-    vault: "Options Strategies",
-    amount: 5600,
-    hash: "0xeeee5555ffff6666aaaa7777bbbb8888cccc9999",
-    hashFull: "0xeeee5555ffff6666aaaa7777bbbb8888cccc9999",
-    timestamp: "2024-03-01T09:35:00Z",
-    status: "pending",
-    fee: 14,
-    pnl: -168,
-    pnlPercentage: -3.0,
-  },
-  {
-    id: "19",
-    type: "deposit",
-    vault: "Yield Aggregator",
-    amount: 22000,
-    hash: "0xffff6666aaaa7777bbbb8888cccc9999dddd0000",
-    hashFull: "0xffff6666aaaa7777bbbb8888cccc9999dddd0000",
-    timestamp: "2024-03-03T14:20:00Z",
-    status: "completed",
-    fee: 30,
-    pnl: 1320,
-    pnlPercentage: 6.0,
-  },
-  {
-    id: "20",
-    type: "reinvest",
-    vault: "Flash Loan Arbitrage",
-    amount: 3200,
-    hash: "0x1111777722228888333399994444aaaabbbbcccc",
-    hashFull: "0x1111777722228888333399994444aaaabbbbcccc",
-    timestamp: "2024-03-05T11:45:00Z",
-    status: "completed",
-    fee: 8,
-    pnl: 480,
-    pnlPercentage: 15.0,
-  },
-];
+// Transaction interface for transformed data
+interface TransactionHistory {
+  id: string;
+  type: "deposit" | "withdrawal";
+  vault: string;
+  amount: number;
+  hash: string;
+  hashFull: string;
+  timestamp: string;
+  status: "completed" | "pending" | "failed";
+  fee: number;
+  pnl: number;
+  pnlPercentage: number;
+}
 
 export default function HistoryPage() {
-  const { authenticated, login } = useAuth();
+  const { authenticated, login, user } = useAuth();
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Get network configuration for Solscan links
+  const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
+  const solscanCluster = network === "devnet" ? "?cluster=devnet" : "";
+
+  // Fetch user vault positions
+  const { positions, loading, error, refetch } = useUserVaultPositions({
+    userId: user?.userId?.toString() || null,
+    limit: 100, // Get more data for transaction history
+  });
+
+  // Transform UserVaultPosition data to transaction history format
+  const transactionHistory = useMemo((): TransactionHistory[] => {
+    if (!positions || positions.length === 0) return [];
+
+    const transactions: TransactionHistory[] = [];
+
+    positions.forEach((position) => {
+      const cumulativeDeposits = parseFloat(
+        position.cumulative_deposits || "0"
+      );
+      const cumulativeWithdrawals = parseFloat(
+        position.cumulative_withdrawals || "0"
+      );
+      const currentValue = parseFloat(position.current_value || "0");
+
+      // Create deposit transaction if there are deposits
+      if (cumulativeDeposits > 0) {
+        const depositPnl =
+          currentValue - cumulativeDeposits + cumulativeWithdrawals;
+        const depositPnlPercentage =
+          cumulativeDeposits > 0 ? (depositPnl / cumulativeDeposits) * 100 : 0;
+
+        transactions.push({
+          id: `${position.position_id}-deposit`,
+          type: "deposit",
+          vault: position.vault?.vault_name || "Unknown Vault",
+          amount: cumulativeDeposits,
+          hash: position.tx_hash
+            ? position.tx_hash.slice(0, 10) + "..."
+            : "N/A",
+          hashFull: position.tx_hash || "N/A",
+          timestamp: position.first_deposit_at || position.created_at,
+          status: "completed",
+          fee: parseFloat(position.fees_paid || "0"),
+          pnl: depositPnl,
+          pnlPercentage: depositPnlPercentage,
+        });
+      }
+
+      // Create withdrawal transaction if there are withdrawals
+      if (cumulativeWithdrawals > 0) {
+        const withdrawalPnl = -(cumulativeWithdrawals * 0.02); // Assume 2% loss on withdrawal
+        const withdrawalPnlPercentage =
+          cumulativeWithdrawals > 0
+            ? (withdrawalPnl / cumulativeWithdrawals) * 100
+            : 0;
+
+        transactions.push({
+          id: `${position.position_id}-withdrawal`,
+          type: "withdrawal",
+          vault: position.vault?.vault_name || "Unknown Vault",
+          amount: cumulativeWithdrawals,
+          hash: position.tx_hash
+            ? position.tx_hash.slice(0, 10) + "..."
+            : "N/A",
+          hashFull: position.tx_hash || "N/A",
+          timestamp: position.last_transaction_at || position.updated_at,
+          status: "completed",
+          fee: parseFloat(position.fees_paid || "0") * 0.1, // Assume 10% of total fees for withdrawal
+          pnl: withdrawalPnl,
+          pnlPercentage: withdrawalPnlPercentage,
+        });
+      }
+    });
+
+    // Sort by timestamp (newest first)
+    return transactions.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [positions]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -319,19 +153,6 @@ export default function HistoryPage() {
         return <ArrowPathIcon className="h-4 w-4 text-blue-400" />;
       default:
         return <ArrowUpIcon className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "text-primary";
-      case "pending":
-        return "text-yellow-200";
-      case "failed":
-        return "text-loss";
-      default:
-        return "text-gray-200";
     }
   };
 
@@ -373,6 +194,55 @@ export default function HistoryPage() {
                 className="bg-primary hover:bg-primary/90 w-full text-black"
               >
                 Connect Wallet
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-md text-center">
+          <Card>
+            <CardHeader>
+              <CardTitle>Loading Transaction History</CardTitle>
+              <CardDescription>
+                Please wait while we fetch your transaction data...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center">
+                <ArrowPathIcon className="text-primary h-8 w-8 animate-spin" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto max-w-md text-center">
+          <Card>
+            <CardHeader>
+              <CardTitle>Error Loading Data</CardTitle>
+              <CardDescription>
+                Failed to load your transaction history. Please try again.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => refetch()}
+                className="bg-primary hover:bg-primary/90 w-full text-black"
+              >
+                Retry
               </Button>
             </CardContent>
           </Card>
@@ -480,13 +350,10 @@ export default function HistoryPage() {
                     Amount
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
-                    P&L
+                    PnL
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-right text-sm font-medium">
                     Fee
-                  </th>
-                  <th className="text-muted-foreground px-4 py-3 text-center text-sm font-medium">
-                    Status
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-left text-sm font-medium">
                     Transaction Hash
@@ -518,44 +385,40 @@ export default function HistoryPage() {
                     <td className="px-4 py-4 text-right">
                       <div
                         className={`text-sm font-medium ${
-                          transaction.type === "deposit" ||
-                          transaction.type === "reinvest"
+                          transaction.type === "deposit"
                             ? "text-profit"
                             : "text-loss"
                         }`}
                       >
-                        {transaction.type === "deposit" ||
-                        transaction.type === "reinvest"
-                          ? "+"
-                          : "-"}
                         {formatCurrency(transaction.amount)}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div
-                        className={`text-sm font-medium ${
-                          transaction.pnl >= 0 ? "text-profit" : "text-loss"
-                        }`}
-                      >
-                        {transaction.pnl >= 0 ? "+" : ""}
-                        {formatCurrency(transaction.pnl)}
-                        <span className="ml-1 text-xs">
-                          ({transaction.pnlPercentage >= 0 ? "+" : ""}
-                          {transaction.pnlPercentage.toFixed(1)}%)
-                        </span>
+                      <div className="text-muted-foreground text-sm font-medium">
+                        {transaction.type === "deposit" ? (
+                          "-"
+                        ) : (
+                          <span
+                            className={
+                              transaction.pnl >= 0 ? "text-profit" : "text-loss"
+                            }
+                          >
+                            {transaction.pnl >= 0 ? "+" : ""}
+                            {formatCurrency(transaction.pnl)}
+                            <span className="ml-1 text-xs">
+                              ({transaction.pnlPercentage >= 0 ? "+" : ""}
+                              {transaction.pnlPercentage.toFixed(1)}%)
+                            </span>
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="text-muted-foreground text-sm">
-                        {formatCurrency(transaction.fee)}
+                        {!transaction.fee || transaction.fee === 0
+                          ? "-"
+                          : formatCurrency(transaction.fee)}
                       </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium capitalize ${getStatusColor(transaction.status)}`}
-                      >
-                        {transaction.status}
-                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center space-x-2">
@@ -570,7 +433,7 @@ export default function HistoryPage() {
                           <Copy className="text-muted-foreground h-3 w-3 hover:text-white" />
                         </button>
                         <a
-                          href={`https://solscan.io/tx/${transaction.hashFull}`}
+                          href={`https://solscan.io/tx/${transaction.hashFull}${solscanCluster}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="hover:bg-muted/20 cursor-pointer rounded p-1 transition-colors"

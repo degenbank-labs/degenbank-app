@@ -43,6 +43,7 @@ export default function VaultDetailPage() {
   // Get referrer information from URL parameters
   const fromPage = searchParams.get("from");
   const battleId = searchParams.get("battleId");
+  const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState("vault-performance");
   const [selectedPeriod, setSelectedPeriod] = useState<"14D" | "30D">("30D");
   const [selectedChart, setSelectedChart] = useState<
@@ -221,6 +222,12 @@ export default function VaultDetailPage() {
     if (fromPage === "battle" && battleId) {
       // Navigate back to specific battle detail page
       router.push(`/arena/battle/${battleId}`);
+    } else if (fromPage === "positions") {
+      // Navigate back to positions page
+      router.push("/overview/positions");
+    } else if (fromPage === "overview") {
+      // Navigate back to overview page
+      router.push("/overview");
     } else {
       // Default navigation to vaults list
       router.push("/vaults/strategy-vaults");
@@ -309,6 +316,17 @@ export default function VaultDetailPage() {
     fetchUserVaultPosition();
   }, [authenticated, user?.userId, vaultId]);
 
+  // Set active tab based on URL parameter
+  useEffect(() => {
+    if (tabParam === "your-performance") {
+      setActiveTab("your-performance");
+    } else if (tabParam === "overview") {
+      setActiveTab("overview");
+    } else {
+      setActiveTab("vault-performance");
+    }
+  }, [tabParam]);
+
   // Handle deposit
   const handleDeposit = async () => {
     if (!authenticated) {
@@ -394,9 +412,15 @@ export default function VaultDetailPage() {
       // Use user's actual balance for deposit
       setAmount(balance.toString());
     } else {
-      // For withdraw, we would need user's vault position
-      // For now, use 0 as placeholder until we implement vault position tracking
-      setAmount("0");
+      // For withdraw, use user's vault position
+      if (userVaultPosition) {
+        const availableAmount =
+          parseFloat(userVaultPosition.cumulative_deposits) -
+          parseFloat(userVaultPosition.cumulative_withdrawals);
+        setAmount(Math.max(0, availableAmount).toString());
+      } else {
+        setAmount("0");
+      }
     }
   };
 
@@ -419,7 +443,7 @@ export default function VaultDetailPage() {
     let statusColor = "text-white";
     let statusText: string;
 
-    switch (phase) {
+    switch (phase.toLowerCase()) {
       case "stake_phase":
         statusColor = "text-primary";
         statusText = "Staking Phase";
@@ -443,19 +467,22 @@ export default function VaultDetailPage() {
   // Helper functions to check if deposit/withdraw is allowed
   const isDepositAllowed = () => {
     if (!battleData) return false;
-    return battleData.current_phase === "stake_phase";
+    return battleData.current_phase.toLowerCase() === "stake_phase";
   };
 
   const isWithdrawAllowed = () => {
     if (!battleData) return false;
-    return battleData.current_phase === "completed";
+    // Check if battle is completed (case insensitive)
+    if (battleData.current_phase.toLowerCase() !== "completed") return false;
+    // Check if user has position in this vault
+    return userVaultPosition !== null;
   };
 
   // Helper function to get phase restriction message
   const getPhaseRestrictionMessage = (action: "deposit" | "withdraw") => {
     if (!battleData) return "Battle data not available";
 
-    const phase = battleData.current_phase;
+    const phase = battleData.current_phase.toLowerCase();
 
     if (action === "deposit") {
       switch (phase) {
@@ -472,9 +499,33 @@ export default function VaultDetailPage() {
           return "Withdrawals are not allowed during staking phase";
         case "battle_phase":
           return "Withdrawals are not allowed during battle phase";
+        case "completed":
+          // Check if user has position in this vault
+          if (!userVaultPosition) {
+            return "You don't have any open position in this vault";
+          }
+          return "";
         default:
           return "Withdrawals are only allowed after battle completion";
       }
+    }
+  };
+
+  // Helper function to get max amount display
+  const getMaxAmountDisplay = () => {
+    if (depositWithdrawTab === "deposit") {
+      return balanceLoading
+        ? "..."
+        : formatUSDC(balance, { showSymbol: false });
+    } else {
+      // For withdraw, show available withdrawal amount
+      if (userVaultPositionLoading) return "...";
+      if (!userVaultPosition) return "0.00";
+
+      const availableAmount =
+        parseFloat(userVaultPosition.cumulative_deposits) -
+        parseFloat(userVaultPosition.cumulative_withdrawals);
+      return formatUSDC(Math.max(0, availableAmount), { showSymbol: false });
     }
   };
 
@@ -1040,10 +1091,7 @@ export default function VaultDetailPage() {
                               onClick={handleMaxClick}
                               className="text-muted-foreground cursor-pointer text-sm hover:text-white"
                             >
-                              Max:{" "}
-                              {balanceLoading
-                                ? "..."
-                                : formatUSDC(balance, { showSymbol: false })}
+                              Max: {getMaxAmountDisplay()}
                             </button>
                           </div>
                           <div className="bg-background border-border relative border">
@@ -1371,10 +1419,7 @@ export default function VaultDetailPage() {
                             onClick={handleMaxClick}
                             className="text-muted-foreground cursor-pointer text-sm hover:text-white"
                           >
-                            Max:{" "}
-                            {balanceLoading
-                              ? "..."
-                              : formatUSDC(balance, { showSymbol: false })}
+                            Max: {getMaxAmountDisplay()}
                           </button>
                         </div>
                         <div className="bg-background border-border relative border">

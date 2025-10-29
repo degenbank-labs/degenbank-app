@@ -15,106 +15,13 @@ import { UserVaultPosition } from "@/lib/api";
 import { ArrowUpIcon, ArrowDownIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
-import { ShieldCheckIcon, Eye } from "lucide-react";
-import { toast } from "sonner";
+import { Eye } from "lucide-react";
 import Image from "next/image";
-
-// Modal component for position details
-function PositionDetailsModal({ 
-  position, 
-  isOpen, 
-  onClose 
-}: { 
-  position: UserVaultPosition | null; 
-  isOpen: boolean; 
-  onClose: () => void; 
-}) {
-  if (!isOpen || !position) return null;
-
-  const pnl = calculatePnL(position.current_value, position.cumulative_deposits);
-  const pnlPercentage = calculatePnLPercentage(position.current_value, position.cumulative_deposits);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white">Position Details</h2>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              ✕
-            </Button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-muted-foreground">Vault Name</label>
-                <p className="text-white font-medium">{position.vault?.vault_name || "Unknown Vault"}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Vault Type</label>
-                <p className="text-white">{position.vault?.vault_type || "N/A"}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Strategy</label>
-                <p className="text-white">{position.vault?.vault_strategy || "N/A"}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">APY</label>
-                <p className="text-green-400 font-medium">{formatPercentage(position.vault?.apy || 0)}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Vault Shares</label>
-                <p className="text-white">{parseFloat(position.vault_shares).toFixed(4)}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Total Deposits</label>
-                <p className="text-white">{formatCurrency(parseFloat(position.cumulative_deposits))}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Total Withdrawals</label>
-                <p className="text-white">{formatCurrency(parseFloat(position.cumulative_withdrawals))}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Current Value</label>
-                <p className="text-white font-medium">{formatCurrency(parseFloat(position.current_value))}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">PnL</label>
-                <div className={`${pnl >= 0 ? "text-profit" : "text-loss"}`}>
-                  <div className="flex items-center">
-                    {pnl >= 0 ? (
-                      <ArrowUpIcon className="mr-1 h-4 w-4" />
-                    ) : (
-                      <ArrowDownIcon className="mr-1 h-4 w-4" />
-                    )}
-                    {formatCurrency(Math.abs(pnl))} ({formatPercentage(pnlPercentage)})
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">High Water Mark</label>
-                <p className="text-white">{formatCurrency(parseFloat(position.high_water_mark))}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Fees Paid</label>
-                <p className="text-white">{formatCurrency(parseFloat(position.fees_paid))}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">First Deposit</label>
-                <p className="text-white">{formatDate(position.first_deposit_at)}</p>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">Last Transaction</label>
-                <p className="text-white">{formatDate(position.last_transaction_at)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import {
+  getBattlePhase,
+  isWithdrawAllowed as utilIsWithdrawAllowed,
+} from "@/utils/battleStatus";
+import { useBattles } from "@/hooks/useBattles";
 
 // Helper functions
 const calculatePnL = (currentValue: string, deposits: string) => {
@@ -134,8 +41,8 @@ const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 };
 
@@ -152,23 +59,32 @@ const formatDate = (dateString: string) => {
 };
 
 export default function PositionsPage() {
-  const { user, loading, authenticated, login } = useAuth();
+  const { user, authenticated, login } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedPosition, setSelectedPosition] = useState<UserVaultPosition | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [battleDataMap, setBattleDataMap] = useState<
+    Record<
+      string,
+      {
+        battle_start: string;
+        battle_end: string;
+        winner_vault_id: string | null;
+      }
+    >
+  >({});
   const itemsPerPage = 10;
+
+  // Use battles hook to fetch battle data
+  const { getBattleById } = useBattles();
 
   // Use the hook to fetch user vault positions
   const {
     positions,
     loading: positionsLoading,
-    error,
     hasMore,
     loadMore,
-    refetch
   } = useUserVaultPositions({
     userId: user?.userId || null,
-    limit: itemsPerPage
+    limit: itemsPerPage,
   });
 
   // Calculate pagination based on current positions
@@ -189,23 +105,135 @@ export default function PositionsPage() {
     }
   }, [currentPage, positions.length, hasMore, positionsLoading, loadMore]);
 
+  // Fetch battle data for positions that have battle_id
+  useEffect(() => {
+    const fetchBattleData = async () => {
+      const battleIds = positions
+        .filter(
+          (pos) =>
+            pos.vault?.battle_id &&
+            !battleDataMap[pos.vault.battle_id.toString()]
+        )
+        .map((pos) => pos.vault!.battle_id!.toString());
+
+      if (battleIds.length > 0) {
+        const newBattleData: Record<
+          string,
+          {
+            battle_start: string;
+            battle_end: string;
+            winner_vault_id: string | null;
+          }
+        > = {};
+
+        await Promise.all(
+          battleIds.map(async (battleId) => {
+            try {
+              const battle = await getBattleById(battleId);
+              if (battle) {
+                newBattleData[battleId] = {
+                  battle_start: battle.battle_start,
+                  battle_end: battle.battle_end,
+                  winner_vault_id: battle.winner_vault_id,
+                };
+              }
+            } catch (error) {
+              console.error(`Failed to fetch battle ${battleId}:`, error);
+            }
+          })
+        );
+
+        setBattleDataMap((prev) => ({ ...prev, ...newBattleData }));
+      }
+    };
+
+    if (positions.length > 0) {
+      fetchBattleData();
+    }
+  }, [positions, getBattleById, battleDataMap]);
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const openDetailsModal = (position: UserVaultPosition) => {
-    setSelectedPosition(position);
-    setIsModalOpen(true);
+  // Check if withdraw is allowed based on battle status
+  const isWithdrawAllowed = (position: UserVaultPosition) => {
+    // If vault has no battle_id, allow withdrawal
+    if (!position.vault?.battle_id) {
+      return true;
+    }
+
+    // Get battle data for this position
+    const battleData = battleDataMap[position.vault.battle_id.toString()];
+    if (!battleData) {
+      // If battle data not loaded yet, assume not allowed
+      return false;
+    }
+
+    // Use utility function to check if withdrawal is allowed
+    return utilIsWithdrawAllowed(
+      battleData.battle_start,
+      battleData.battle_end
+    );
   };
 
-  const closeDetailsModal = () => {
-    setIsModalOpen(false);
-    setSelectedPosition(null);
+  // Get display status for the vault
+  const getVaultDisplayStatus = (position: UserVaultPosition) => {
+    // If vault has no battle_id, it's available for withdrawal
+    if (!position.vault?.battle_id) {
+      return "Completed";
+    }
+
+    // Get battle data for this position
+    const battleData = battleDataMap[position.vault.battle_id.toString()];
+    if (!battleData) {
+      // If battle data not loaded yet, show loading state
+      return "Loading...";
+    }
+
+    // Use utility function to get battle phase
+    const phase = getBattlePhase(
+      battleData.battle_start,
+      battleData.battle_end
+    );
+
+    // Map battle phases to display text and check for winner/loser
+    switch (phase) {
+      case "Stake Phase":
+        return "Stake Phase";
+      case "Battle Phase":
+        return "Battle Phase";
+      case "Completed":
+        // Check if this vault is the winner
+        if (battleData.winner_vault_id) {
+          if (battleData.winner_vault_id === position.vault?.vault_id) {
+            return "Winner";
+          } else {
+            return "Lose";
+          }
+        }
+        return "Completed";
+      default:
+        return "Unknown";
+    }
   };
 
-  // Check if vault is in battle (battle_id exists and battle is not completed)
-  const isVaultInBattle = (position: UserVaultPosition) => {
-    return position.vault?.battle_id !== null;
+  // Get text color class based on status
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case "Stake Phase":
+        return "text-blue-400";
+      case "Battle Phase":
+        return "text-purple-400";
+      case "Winner":
+        return "text-primary";
+      case "Lose":
+        return "text-red-400";
+      case "Completed":
+        return "text-gray-400";
+      default:
+        return "text-gray-400";
+    }
   };
 
   if (!authenticated) {
@@ -270,6 +298,9 @@ export default function PositionsPage() {
                     APY
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-center text-sm font-medium">
+                    Status
+                  </th>
+                  <th className="text-muted-foreground px-4 py-3 text-center text-sm font-medium">
                     Deposit Date
                   </th>
                   <th className="text-muted-foreground px-4 py-3 text-center text-sm font-medium">
@@ -279,10 +310,16 @@ export default function PositionsPage() {
               </thead>
               <tbody>
                 {paginatedPositions.map((position) => {
-                  const pnl = calculatePnL(position.current_value, position.cumulative_deposits);
-                  const pnlPercentage = calculatePnLPercentage(position.current_value, position.cumulative_deposits);
-                  const inBattle = isVaultInBattle(position);
-                  
+                  const pnl = calculatePnL(
+                    position.current_value,
+                    position.cumulative_deposits
+                  );
+                  const pnlPercentage = calculatePnLPercentage(
+                    position.current_value,
+                    position.cumulative_deposits
+                  );
+                  const displayStatus = getVaultDisplayStatus(position);
+
                   return (
                     <tr
                       key={position.position_id}
@@ -301,7 +338,7 @@ export default function PositionsPage() {
                                 className="rounded-full"
                               />
                             ) : (
-                              <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                              <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
                                 <span className="text-xs font-medium">
                                   {position.vault?.vault_name?.charAt(0) || "V"}
                                 </span>
@@ -309,10 +346,10 @@ export default function PositionsPage() {
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium text-white truncate">
+                            <div className="truncate font-medium text-white">
                               {position.vault?.vault_name || "Unknown Vault"}
                             </div>
-                            <div className="text-muted-foreground text-sm truncate">
+                            <div className="text-muted-foreground truncate text-sm">
                               {position.vault?.vault_type || "Unknown Type"}
                             </div>
                           </div>
@@ -321,43 +358,66 @@ export default function PositionsPage() {
 
                       {/* Current Value */}
                       <td className="px-4 py-4 text-right">
-                        <div className="text-white font-medium">
+                        <div className="text-sm font-medium text-white">
                           {formatCurrency(parseFloat(position.current_value))}
                         </div>
                       </td>
 
                       {/* PnL */}
                       <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <div
-                            className={`flex items-center whitespace-nowrap ${
-                              pnl >= 0 ? "text-profit" : "text-loss"
-                            }`}
-                          >
-                            {pnl >= 0 ? (
-                              <ArrowUpIcon className="mr-1 h-4 w-4 flex-shrink-0" />
-                            ) : (
-                              <ArrowDownIcon className="mr-1 h-4 w-4 flex-shrink-0" />
-                            )}
-                            <span className="font-medium">
-                              {formatCurrency(Math.abs(pnl))}
-                            </span>
+                        {displayStatus === "Stake Phase" ? (
+                          <div className="text-sm font-medium text-muted-foreground">
+                            -
                           </div>
-                        </div>
-                        <div
-                          className={`text-right text-sm whitespace-nowrap ${
-                            pnl >= 0 ? "text-profit" : "text-loss"
-                          }`}
-                        >
-                          {formatPercentage(pnlPercentage)}
-                        </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-end space-x-1">
+                              <div
+                                className={`flex items-center text-sm whitespace-nowrap ${
+                                  pnl >= 0 ? "text-profit" : "text-loss"
+                                }`}
+                              >
+                                {pnl >= 0 ? (
+                                  <ArrowUpIcon className="mr-1 h-4 w-4 flex-shrink-0" />
+                                ) : (
+                                  <ArrowDownIcon className="mr-1 h-4 w-4 flex-shrink-0" />
+                                )}
+                                <span className="font-medium">
+                                  {formatCurrency(Math.abs(pnl))}
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              className={`text-right text-sm whitespace-nowrap ${
+                                pnl >= 0 ? "text-profit" : "text-loss"
+                              }`}
+                            >
+                              {formatPercentage(pnlPercentage)}
+                            </div>
+                          </>
+                        )}
                       </td>
 
                       {/* APY */}
                       <td className="px-4 py-4 text-right">
-                        <div className="text-green-400 font-medium">
-                          {formatPercentage(position.vault?.apy || 0)}
-                        </div>
+                        {displayStatus === "Stake Phase" ? (
+                          <div className="text-sm font-medium text-muted-foreground">
+                            -
+                          </div>
+                        ) : (
+                          <div className="text-sm font-medium text-green-400">
+                            {formatPercentage(position.vault?.apy || 0)}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-4 text-center">
+                        <span
+                          className={`text-sm font-medium ${getStatusTextColor(displayStatus)}`}
+                        >
+                          {displayStatus}
+                        </span>
                       </td>
 
                       {/* Deposit Date */}
@@ -369,36 +429,18 @@ export default function PositionsPage() {
 
                       {/* Actions */}
                       <td className="px-4 py-4 text-center">
-                        <div className="flex justify-center space-x-2">
-                          {inBattle ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-orange-400 border-orange-400/50 cursor-not-allowed"
-                              disabled
-                            >
-                              <ShieldCheckIcon className="h-4 w-4 mr-1" />
-                              In Battle
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="cursor-pointer"
-                            >
-                              Withdraw
-                            </Button>
-                          )}
+                        <Link
+                          href={`/vaults/strategy-vaults/${position.vault?.vault_id}?tab=your-performance&from=positions`}
+                        >
                           <Button
                             variant="outline"
                             size="sm"
                             className="cursor-pointer"
-                            onClick={() => openDetailsModal(position)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Eye className="mr-1 h-4 w-4" />
                             Details
                           </Button>
-                        </div>
+                        </Link>
                       </td>
                     </tr>
                   );
@@ -419,13 +461,6 @@ export default function PositionsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Position Details Modal */}
-      <PositionDetailsModal
-        position={selectedPosition}
-        isOpen={isModalOpen}
-        onClose={closeDetailsModal}
-      />
     </div>
   );
 }
