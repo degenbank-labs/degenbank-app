@@ -331,7 +331,11 @@ export default function OverviewPage() {
                   {formatCurrency(Math.abs(portfolioMetrics.totalPnL))}
                 </p>
               </div>
-              <div className={portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"}>
+              <div
+                className={
+                  portfolioMetrics.totalPnL >= 0 ? "text-profit" : "text-loss"
+                }
+              >
                 {portfolioMetrics.totalPnL >= 0 ? (
                   <ArrowUpIcon className="h-6 w-6" />
                 ) : (
@@ -347,7 +351,9 @@ export default function OverviewPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm">Active Positions</p>
+                <p className="text-muted-foreground text-sm">
+                  Active Positions
+                </p>
                 <p className="text-2xl font-bold text-white">
                   {positions.length}
                 </p>
@@ -391,182 +397,182 @@ export default function OverviewPage() {
 
       {/* Positions Table */}
       <Card className="bg-card border-border rounded-none">
-          <CardHeader>
-            <CardTitle className="text-sm">Positions</CardTitle>
-            <CardDescription className="text-xs">
-              Current vault positions and their performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-border border-b">
-                    <th className="text-muted-foreground px-1 py-2 text-left text-xs font-medium">
-                      Vault
-                    </th>
-                    <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
-                      Amount
-                    </th>
-                    <th className="text-muted-foreground px-1 py-2 text-center text-xs font-medium">
-                      Status
-                    </th>
-                    <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
-                      PnL
-                    </th>
-                    <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
-                      APY
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positionsLoading ? (
-                    <tr>
-                      <td colSpan={5} className="px-1 py-8 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-muted-foreground text-xs">
-                            Loading positions...
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : positions.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-1 py-8 text-center">
+        <CardHeader>
+          <CardTitle className="text-sm">Positions</CardTitle>
+          <CardDescription className="text-xs">
+            Current vault positions and their performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="text-muted-foreground px-1 py-2 text-left text-xs font-medium">
+                    Vault
+                  </th>
+                  <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
+                    Amount
+                  </th>
+                  <th className="text-muted-foreground px-1 py-2 text-center text-xs font-medium">
+                    Status
+                  </th>
+                  <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
+                    PnL
+                  </th>
+                  <th className="text-muted-foreground px-1 py-2 text-right text-xs font-medium">
+                    APY
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {positionsLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-1 py-8 text-center">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-muted-foreground text-xs">
-                          No positions found
+                          Loading positions...
                         </span>
-                      </td>
-                    </tr>
-                  ) : (
-                    positions.slice(0, 6).map((position) => {
-                      // Calculate PnL and APY from position data (same as positions page)
-                      const currentValue = parseFloat(position.current_value);
-                      const cumulativeDeposits = parseFloat(
-                        position.cumulative_deposits
-                      );
-                      const pnl = calculatePnL(
-                        position.current_value,
-                        position.cumulative_deposits
-                      );
-                      const pnlPercentage = calculatePnLPercentage(
-                        position.current_value,
-                        position.cumulative_deposits
-                      );
-                      const apy = position.vault?.apy || 0;
+                      </div>
+                    </td>
+                  </tr>
+                ) : positions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-1 py-8 text-center">
+                      <span className="text-muted-foreground text-xs">
+                        No positions found
+                      </span>
+                    </td>
+                  </tr>
+                ) : (
+                  positions.slice(0, 6).map((position) => {
+                    // Calculate PnL and APY from position data (same as positions page)
+                    const currentValue = parseFloat(position.current_value);
+                    const cumulativeDeposits = parseFloat(
+                      position.cumulative_deposits
+                    );
+                    const pnl = calculatePnL(
+                      position.current_value,
+                      position.cumulative_deposits
+                    );
+                    const pnlPercentage = calculatePnLPercentage(
+                      position.current_value,
+                      position.cumulative_deposits
+                    );
+                    const apy = position.vault?.apy || 0;
 
-                      // Get display status using the same logic as positions page
-                      const displayStatus = getVaultDisplayStatus(position);
+                    // Get display status using the same logic as positions page
+                    const displayStatus = getVaultDisplayStatus(position);
 
-                      return (
-                        <tr
-                          key={position.position_id}
-                          className="border-border/50 hover:bg-primary/10 cursor-pointer border-b"
-                          onClick={() =>
-                            (window.location.href = `/vaults/strategy-vaults/${position.vault_id}?tab=your-performance&from=overview`)
-                          }
-                        >
-                          <td className="px-1 py-2">
-                            <div className="flex items-center space-x-2">
-                              <Image
-                                src={
-                                  position.vault?.vault_image ||
-                                  "https://cdn.degenbank.cc/bonk.png"
-                                }
-                                alt={position.vault?.vault_name || "Vault"}
-                                width={24}
-                                height={24}
-                                className="h-6 w-6 rounded-full object-cover"
-                              />
-                              <div className="text-xs font-medium text-white">
-                                {position.vault?.vault_name || "Unknown Vault"}
-                              </div>
+                    return (
+                      <tr
+                        key={position.position_id}
+                        className="border-border/50 hover:bg-primary/10 cursor-pointer border-b"
+                        onClick={() =>
+                          (window.location.href = `/vaults/strategy-vaults/${position.vault_id}?tab=your-performance&from=overview`)
+                        }
+                      >
+                        <td className="px-1 py-2">
+                          <div className="flex items-center space-x-2">
+                            <Image
+                              src={
+                                position.vault?.vault_image ||
+                                "https://cdn.degenbank.cc/bonk.png"
+                              }
+                              alt={position.vault?.vault_name || "Vault"}
+                              width={24}
+                              height={24}
+                              className="h-6 w-6 rounded-full object-cover"
+                            />
+                            <div className="text-xs font-medium text-white">
+                              {position.vault?.vault_name || "Unknown Vault"}
                             </div>
-                          </td>
-                          <td className="px-1 py-2 text-right">
-                            <div className="text-xs text-white">
-                              {formatCurrency(cumulativeDeposits)}
+                          </div>
+                        </td>
+                        <td className="px-1 py-2 text-right">
+                          <div className="text-xs text-white">
+                            {formatCurrency(cumulativeDeposits)}
+                          </div>
+                        </td>
+                        <td className="px-1 py-2 text-center">
+                          <div
+                            className={`inline-block px-2 py-1 text-xs ${
+                              displayStatus === "Stake Phase"
+                                ? "bg-blue-500/10 text-blue-400"
+                                : displayStatus === "Battle Phase"
+                                  ? "bg-purple-500/10 text-purple-400"
+                                  : displayStatus === "Winner"
+                                    ? "text-primary bg-green-500/10"
+                                    : displayStatus === "Lose"
+                                      ? "bg-red-500/10 text-red-400"
+                                      : displayStatus === "Completed"
+                                        ? "bg-gray-500/10 text-gray-400"
+                                        : "bg-gray-500/10 text-gray-400"
+                            }`}
+                          >
+                            {displayStatus}
+                          </div>
+                        </td>
+                        <td className="px-1 py-2 text-right">
+                          {displayStatus === "Stake Phase" ? (
+                            <div className="text-muted-foreground text-xs">
+                              -
                             </div>
-                          </td>
-                          <td className="px-1 py-2 text-center">
-                            <div
-                              className={`inline-block rounded-full px-2 py-1 text-xs ${
-                                displayStatus === "Stake Phase"
-                                  ? "bg-blue-500/10 text-blue-400"
-                                  : displayStatus === "Battle Phase"
-                                    ? "bg-purple-500/10 text-purple-400"
-                                    : displayStatus === "Winner"
-                                      ? "text-primary bg-green-500/10"
-                                      : displayStatus === "Lose"
-                                        ? "bg-red-500/10 text-red-400"
-                                        : displayStatus === "Completed"
-                                          ? "bg-gray-500/10 text-gray-400"
-                                          : "bg-gray-500/10 text-gray-400"
-                              }`}
-                            >
-                              {displayStatus}
+                          ) : (
+                            <>
+                              <div
+                                className={`text-xs ${
+                                  pnl >= 0 ? "text-profit" : "text-loss"
+                                }`}
+                              >
+                                {pnl >= 0 ? "+" : ""}
+                                {formatCurrency(Math.abs(pnl))}
+                              </div>
+                              <div
+                                className={`text-xs ${
+                                  pnlPercentage >= 0
+                                    ? "text-profit"
+                                    : "text-loss"
+                                }`}
+                              >
+                                {pnlPercentage >= 0 ? "+" : ""}
+                                {formatPercentage(Math.abs(pnlPercentage))}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-1 py-2 text-right">
+                          {displayStatus === "Stake Phase" ? (
+                            <div className="text-muted-foreground text-xs">
+                              -
                             </div>
-                          </td>
-                          <td className="px-1 py-2 text-right">
-                            {displayStatus === "Stake Phase" ? (
-                              <div className="text-muted-foreground text-xs">
-                                -
-                              </div>
-                            ) : (
-                              <>
-                                <div
-                                  className={`text-xs ${
-                                    pnl >= 0 ? "text-profit" : "text-loss"
-                                  }`}
-                                >
-                                  {pnl >= 0 ? "+" : ""}
-                                  {formatCurrency(Math.abs(pnl))}
-                                </div>
-                                <div
-                                  className={`text-xs ${
-                                    pnlPercentage >= 0
-                                      ? "text-profit"
-                                      : "text-loss"
-                                  }`}
-                                >
-                                  {pnlPercentage >= 0 ? "+" : ""}
-                                  {formatPercentage(Math.abs(pnlPercentage))}
-                                </div>
-                              </>
-                            )}
-                          </td>
-                          <td className="px-1 py-2 text-right">
-                            {displayStatus === "Stake Phase" ? (
-                              <div className="text-muted-foreground text-xs">
-                                -
-                              </div>
-                            ) : (
-                              <div className="text-xs text-green-400">
-                                {formatPercentage(apy)}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-              <div className="mt-2 text-center">
-                <Link href="/overview/positions">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="cursor-pointer text-xs"
-                  >
-                    View All Positions
-                  </Button>
-                </Link>
-              </div>
+                          ) : (
+                            <div className="text-xs text-green-400">
+                              {formatPercentage(apy)}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+            <div className="mt-2 text-center">
+              <Link href="/overview/positions">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer text-xs"
+                >
+                  View All Positions
+                </Button>
+              </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Available Vaults and Battle Arenas - Table Format */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -712,7 +718,7 @@ export default function OverviewPage() {
                       </td>
                       <td className="px-1 py-2 text-center">
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getBattleStatusColor(arena.status)}`}
+                          className={`inline-flex items-center px-2 py-1 text-xs font-medium ${getBattleStatusColor(arena.status)}`}
                         >
                           {arena.phase}
                         </span>

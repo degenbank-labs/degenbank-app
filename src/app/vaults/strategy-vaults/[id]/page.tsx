@@ -1536,8 +1536,11 @@ export default function VaultDetailPage() {
                   isAmountValid={isAmountValid}
                   depositState={depositState}
                   withdrawState={withdrawState}
+                  isDepositAllowed={isDepositAllowed}
+                  isWithdrawAllowed={isWithdrawAllowed}
+                  getPhaseRestrictionMessage={getPhaseRestrictionMessage}
+                  battleData={battleData}
                   vaultData={vaultData}
-                  battleData={null}
                   error={null}
                 />
               </div>
