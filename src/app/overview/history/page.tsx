@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserVaultPositions } from "@/hooks/useUserVaultPositions";
+import { useUserTxHistory } from "@/hooks/useUserTxHistory";
 import {
   ArrowUpIcon,
   PlusIcon,
@@ -21,21 +21,6 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 
-// Transaction interface for transformed data
-interface TransactionHistory {
-  id: string;
-  type: "deposit" | "withdrawal";
-  vault: string;
-  amount: number;
-  hash: string;
-  hashFull: string;
-  timestamp: string;
-  status: "completed" | "pending" | "failed";
-  fee: number;
-  pnl: number;
-  pnlPercentage: number;
-}
-
 export default function HistoryPage() {
   const { authenticated, login, user } = useAuth();
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
@@ -46,91 +31,81 @@ export default function HistoryPage() {
   const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
   const solscanCluster = network === "devnet" ? "?cluster=devnet" : "";
 
-  // Fetch user vault positions
-  const { positions, loading, error, refetch } = useUserVaultPositions({
+  // Fetch user transaction history
+  const { history, loading, error, refetch } = useUserTxHistory({
     userId: user?.userId?.toString() || null,
     limit: 100, // Get more data for transaction history
   });
 
-  // Transform UserVaultPosition data to transaction history format
-  const transactionHistory = useMemo((): TransactionHistory[] => {
-    if (!positions || positions.length === 0) return [];
+  // Use transaction history data directly
+  const transactionHistory = useMemo(() => {
+    if (!history || history.length === 0) return [];
 
-    const transactions: TransactionHistory[] = [];
-
-    positions.forEach((position) => {
-      const cumulativeDeposits = parseFloat(
-        position.cumulative_deposits || "0"
-      );
-      const cumulativeWithdrawals = parseFloat(
-        position.cumulative_withdrawals || "0"
-      );
-      const currentValue = parseFloat(position.current_value || "0");
-
-      // Create deposit transaction if there are deposits
-      if (cumulativeDeposits > 0) {
-        const depositPnl =
-          currentValue - cumulativeDeposits + cumulativeWithdrawals;
-        const depositPnlPercentage =
-          cumulativeDeposits > 0 ? (depositPnl / cumulativeDeposits) * 100 : 0;
-
-        transactions.push({
-          id: `${position.position_id}-deposit`,
-          type: "deposit",
-          vault: position.vault?.vault_name || "Unknown Vault",
-          amount: cumulativeDeposits,
-          hash: position.tx_hash
-            ? position.tx_hash.slice(0, 10) + "..."
-            : "N/A",
-          hashFull: position.tx_hash || "N/A",
-          timestamp: position.first_deposit_at || position.created_at,
-          status: "completed",
-          fee: parseFloat(position.fees_paid || "0"),
-          pnl: depositPnl,
-          pnlPercentage: depositPnlPercentage,
-        });
-      }
-
-      // Create withdrawal transaction if there are withdrawals
-      if (cumulativeWithdrawals > 0) {
-        const withdrawalPnl = -(cumulativeWithdrawals * 0.02); // Assume 2% loss on withdrawal
-        const withdrawalPnlPercentage =
-          cumulativeWithdrawals > 0
-            ? (withdrawalPnl / cumulativeWithdrawals) * 100
-            : 0;
-
-        transactions.push({
-          id: `${position.position_id}-withdrawal`,
-          type: "withdrawal",
-          vault: position.vault?.vault_name || "Unknown Vault",
-          amount: cumulativeWithdrawals,
-          hash: position.tx_hash
-            ? position.tx_hash.slice(0, 10) + "..."
-            : "N/A",
-          hashFull: position.tx_hash || "N/A",
-          timestamp: position.last_transaction_at || position.updated_at,
-          status: "completed",
-          fee: parseFloat(position.fees_paid || "0") * 0.1, // Assume 10% of total fees for withdrawal
-          pnl: withdrawalPnl,
-          pnlPercentage: withdrawalPnlPercentage,
-        });
-      }
-    });
-
-    // Sort by timestamp (newest first)
-    return transactions.sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-  }, [positions]);
+    // Transform UserTxHistory to display format
+    return history.map((tx) => ({
+      id: tx.tx_id,
+      type: tx.tx_type,
+      vault: tx.vault?.vault_name || "Unknown Vault",
+      vaultImage: tx.vault?.vault_image || "",
+      amount: parseFloat(tx.amount),
+      fee: parseFloat(tx.fee) / 1_000_000_000, // Convert lamports to SOL
+      timestamp: tx.transactionDate,
+      status: "completed" as const,
+      hash: tx.tx_id.slice(0, 10) + "...", // Use tx_id as hash display
+      hashFull: tx.tx_id, // Full transaction ID
+      // For now, we don't have PnL data in transaction history
+      // This could be calculated separately or added to the backend
+      pnl: 0,
+      pnlPercentage: 0,
+    }));
+  }, [history]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+    // USDC uses 6 decimal places precision
+    // For display purposes, we show different decimal places based on amount size
+    // to maintain readability while preserving precision for small amounts
+    let maximumFractionDigits = 6;
+    let minimumFractionDigits = 2;
+
+    // For very small amounts (< 0.01), show up to 6 decimals to preserve precision
+    if (amount < 0.01) {
+      maximumFractionDigits = 6;
+      minimumFractionDigits = 0; // Don't force trailing zeros for very small amounts
+    }
+    // For small amounts (< 1), show up to 4 decimals
+    else if (amount < 1) {
+      maximumFractionDigits = 4;
+      minimumFractionDigits = 2;
+    }
+    // For medium amounts (< 1000), show up to 2 decimals
+    else if (amount < 1000) {
+      maximumFractionDigits = 2;
+      minimumFractionDigits = 2;
+    }
+    // For large amounts, show 2 decimals
+    else {
+      maximumFractionDigits = 2;
+      minimumFractionDigits = 2;
+    }
+
+    // Format as number with USDC suffix instead of using currency formatter
+    const formattedNumber = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits,
+      maximumFractionDigits,
     }).format(amount);
+
+    return `${formattedNumber} USDC`;
+  };
+
+  const formatSOL = (lamports: number) => {
+    // Convert lamports to SOL (1 SOL = 1,000,000,000 lamports)
+    const sol = lamports / 1_000_000_000;
+    return (
+      new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 9,
+      }).format(sol) + " SOL"
+    );
   };
 
   const formatDateTime = (timestamp: string) => {
@@ -310,7 +285,7 @@ export default function HistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-white">
-              {formatCurrency(totalFees)}
+              {formatSOL(totalFees * 1_000_000_000)}
             </div>
           </CardContent>
         </Card>
@@ -417,7 +392,7 @@ export default function HistoryPage() {
                       <div className="text-muted-foreground text-sm">
                         {!transaction.fee || transaction.fee === 0
                           ? "-"
-                          : formatCurrency(transaction.fee)}
+                          : formatSOL(transaction.fee * 1_000_000_000)}
                       </div>
                     </td>
                     <td className="px-4 py-4">

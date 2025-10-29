@@ -235,6 +235,34 @@ export interface WithdrawalRequest {
   tx_hash: string;
 }
 
+// UserTxHistory interface matching backend model
+export interface UserTxHistory {
+  tx_id: string;
+  vault_id: string;
+  user_id: string;
+  tx_type: "deposit" | "withdrawal";
+  amount: string;
+  fee: string;
+  transactionDate: string; // Date as ISO string
+  vault?: {
+    vault_id: string;
+    vault_name: string;
+    vault_image: string;
+    vault_strategy: string;
+    vault_type: string;
+  };
+  user?: {
+    userId: string;
+    fullname: string;
+    walletAddress: string;
+  };
+}
+
+export interface GetUserTxHistoryResponse {
+  results: UserTxHistory[];
+  total: number;
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -623,6 +651,46 @@ class ApiService {
         method: "PUT",
         body: JSON.stringify(performanceData),
       },
+      token
+    );
+    return response.data;
+  }
+
+  // User Transaction History methods
+  async getUserTxHistory(
+    userId: string,
+    skip: number = 0,
+    limit: number = 10,
+    token?: string
+  ): Promise<GetUserTxHistoryResponse> {
+    const response = await this.request<GetUserTxHistoryResponse>(
+      `/user-tx-history/user/${userId}?skip=${skip}&limit=${limit}`,
+      {},
+      token
+    );
+    return response.data;
+  }
+
+  async getTxHistoryById(
+    txId: string,
+    token?: string
+  ): Promise<UserTxHistory> {
+    const response = await this.request<UserTxHistory>(
+      `/user-tx-history/${txId}`,
+      {},
+      token
+    );
+    return response.data;
+  }
+
+  async getAllTxHistory(
+    skip: number = 0,
+    limit: number = 10,
+    token?: string
+  ): Promise<GetUserTxHistoryResponse> {
+    const response = await this.request<GetUserTxHistoryResponse>(
+      `/user-tx-history?skip=${skip}&limit=${limit}`,
+      {},
       token
     );
     return response.data;
