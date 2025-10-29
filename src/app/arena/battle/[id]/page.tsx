@@ -28,7 +28,12 @@ export default function BattleDetailPage() {
   const [selectedVault, setSelectedVault] = useState<string | null>(null);
 
   // Debug: Log battleId
-  console.log('BattleDetailPage - battleId:', battleId, 'type:', typeof battleId);
+  console.log(
+    "BattleDetailPage - battleId:",
+    battleId,
+    "type:",
+    typeof battleId
+  );
 
   // Use battles hook for real data
   const { getBattleById, error } = useBattles();
@@ -268,14 +273,8 @@ export default function BattleDetailPage() {
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="font-cirka flex items-center text-2xl font-bold text-white md:text-3xl">
                     <Swords className="text-primary mr-3 h-8 w-8" />
-                    <span className="text-white">Vault Battle Leaderboard</span>
+                    <span className="text-white">Vault Battle</span>
                   </h2>
-                  <Badge
-                    variant="outline"
-                    className="border-primary text-primary rounded-none"
-                  >
-                    Live Performance
-                  </Badge>
                 </div>
 
                 {/* Vault Cards */}

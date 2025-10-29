@@ -83,10 +83,10 @@ export function Footer() {
           <div className="space-y-6">
             <div className="flex flex-col space-y-3">
               <a
-                href="mailto:support@degenreserve.xyz"
+                href="mailto:support@degenbanx.xyz"
                 className="text-base text-black/80 transition-colors hover:text-black"
               >
-                support@degenreserve.xyz
+                support@degenbanx.xyz
               </a>
               <button
                 onClick={() => handleExternalLink("#")}
@@ -103,14 +103,14 @@ export function Footer() {
           <div className="flex items-center justify-center gap-4">
             <Image
               src="/assets/logo/degenbank-logo.png"
-              alt="Degen Reserve"
+              alt="Degen Banx"
               width={240}
               height={72}
               className="mt-4 h-20 w-auto brightness-75 md:h-28"
               priority
             />
             <p className="font-cirka text-6xl font-bold whitespace-nowrap text-[#5C9487] md:text-9xl">
-              Degen Reserve
+              Degen Banx
             </p>
           </div>
         </div>

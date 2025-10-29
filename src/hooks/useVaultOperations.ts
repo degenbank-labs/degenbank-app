@@ -252,7 +252,8 @@ export const useVaultOperations = () => {
       vaultPubkey: PublicKey,
       battlePubkey: PublicKey,
       userPubkey: PublicKey,
-      amount: bigint
+      amount: bigint,
+      vaultTokenMint: PublicKey
     ): Promise<TransactionInstruction | null> => {
       // Use vault as authority
       const vtokenAuthority = vaultPubkey;
@@ -264,19 +265,14 @@ export const useVaultOperations = () => {
       );
 
       const depositorVtokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
+        vaultTokenMint,
         userPubkey
       );
 
-      const vtokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
-        vtokenAuthority,
-        true
-      );
+      const vtokenAccount = vaultTokenMint;
 
-      // vaultTokenAccount: vault's USDC account (for receiving deposits)
       const vaultTokenAccount = await getAssociatedTokenAddress(
-        TOKEN_MINT,
+        TOKEN_MINT, // This should be the deposit token (USDC), not vault token mint
         vaultPubkey,
         true
       );
@@ -863,14 +859,26 @@ export const useVaultOperations = () => {
           throw new Error("Vault not found or vault address is missing");
         }
 
+        if (!vaultData.vault_token_mint || vaultData.vault_token_mint.trim() === "") {
+          throw new Error("Vault token mint is missing");
+        }
+
         // Use vault_address instead of vault_id for PublicKey creation
         const vaultPubkey = new PublicKey(vaultData.vault_address);
+        const vaultTokenMint = new PublicKey(vaultData.vault_token_mint);
         const amountBigInt = BigInt(Math.floor(amount * 1e6)); // Convert to USDC units (6 decimals)
 
         // Get battle PDA or use provided address
         let battlePubkey: PublicKey;
         if (battleAddress) {
           battlePubkey = new PublicKey(battleAddress);
+        } else if (vaultData.battle_id) {
+          // Get battle data to retrieve the actual battle address
+          const battleData = await apiService.getBattle(vaultData.battle_id.toString());
+          if (!battleData || !battleData.pda_address) {
+            throw new Error(`Battle data not found or PDA address missing for battle ID: ${vaultData.battle_id}`);
+          }
+          battlePubkey = new PublicKey(battleData.pda_address);
         } else {
           const [battlePDA] = await solanaService.getBattlePDA(userPubkey);
           battlePubkey = battlePDA;
@@ -879,12 +887,39 @@ export const useVaultOperations = () => {
         // Build transaction
         const transaction = new Transaction();
 
+        // Check and create vault token account if needed (for user's vault tokens)
+        try {
+          const depositorVtokenAccount = await getAssociatedTokenAddress(
+            vaultTokenMint,
+            userPubkey
+          );
+
+          const depositorVtokenAccountInfo = await connection.getAccountInfo(depositorVtokenAccount);
+          if (!depositorVtokenAccountInfo) {
+            transaction.add(
+              createAssociatedTokenAccountInstruction(
+                userPubkey,
+                depositorVtokenAccount,
+                userPubkey,
+                vaultTokenMint
+              )
+            );
+          }
+        } catch (error) {
+          throw new Error(
+            `Failed to check or create vault token account: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
+        }
+
         // Add withdraw instruction
         const withdrawIx = await createWithdrawInstruction(
           vaultPubkey,
           battlePubkey,
           userPubkey,
-          amountBigInt
+          amountBigInt,
+          vaultTokenMint
         );
 
         if (withdrawIx) {

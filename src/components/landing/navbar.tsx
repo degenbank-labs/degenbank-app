@@ -27,11 +27,6 @@ export function Navbar() {
     setIsMobileMenuOpen(false); // Close mobile menu after clicking
   };
 
-  const handleExternalLink = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-    setIsMobileMenuOpen(false);
-  };
-
   return (
     <nav className="fixed top-0 right-0 left-0 z-50 border-white/10 bg-black/80 backdrop-blur-md">
       <div className="mx-auto max-w-6xl px-6 py-4">
@@ -40,14 +35,14 @@ export function Navbar() {
           <div className="flex items-center">
             <Image
               src="/assets/logo/degenbank-logo.png"
-              alt="Degen Reserve"
+              alt="Degen Banx"
               width={180}
               height={56}
               className="h-12 w-auto"
               priority
             />
             <p className="font-cirka ml-2 text-2xl font-bold text-white md:text-4xl">
-              Degen Reserve
+              Degen Banx
             </p>
           </div>
 

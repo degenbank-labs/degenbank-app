@@ -165,9 +165,9 @@ export default function BattleArenaPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="h-screen w-full overflow-hidden bg-black text-white">
+      <div className="min-h-screen w-full bg-black text-white">
         <MainNavbar />
-        <div className="relative flex h-full flex-col overflow-hidden">
+        <div className="relative flex min-h-screen flex-col">
           <div className="absolute inset-0 z-0">
             <LightRays
               raysOrigin="top-center"
@@ -198,9 +198,9 @@ export default function BattleArenaPage() {
   // Error state
   if (error) {
     return (
-      <div className="h-screen w-full overflow-hidden bg-black text-white">
+      <div className="min-h-screen w-full bg-black text-white">
         <MainNavbar />
-        <div className="relative flex h-full flex-col overflow-hidden">
+        <div className="relative flex min-h-screen flex-col">
           <div className="absolute inset-0 z-0">
             <LightRays
               raysOrigin="top-center"
@@ -238,13 +238,13 @@ export default function BattleArenaPage() {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-black text-white">
+    <div className="min-h-screen w-full bg-black text-white">
       <MainNavbar />
 
       {/* Fullscreen Cube Loader */}
       <CubeLoader isVisible={isLoading} />
 
-      <div className="relative flex h-full flex-col overflow-hidden">
+      <div className="relative flex min-h-screen flex-col">
         {/* Background Light Rays */}
         <div className="absolute inset-0 z-0">
           <LightRays
@@ -264,7 +264,7 @@ export default function BattleArenaPage() {
         </div>
 
         {/* Main Content */}
-        <div className="relative z-10 flex h-full flex-col">
+        <div className="relative z-10 flex min-h-screen flex-col">
           {/* Header Section */}
           <div className="container mx-auto px-4 pt-8 pb-6">
             <div className="mb-8 text-center">
@@ -335,8 +335,8 @@ export default function BattleArenaPage() {
             </div>
           </div>
 
-          {/* Main Arena Grid - Full Height Container */}
-          <div className="relative flex flex-1 items-center justify-center px-4">
+          {/* Main Arena Grid - Responsive Container */}
+          <div className="relative flex flex-1 items-center justify-center px-4 py-8">
             {arenas.length === 0 ? (
               <div className="space-y-4 text-center">
                 <p className="text-lg text-white/60">

@@ -107,14 +107,14 @@ export function MainNavbar() {
             <Link href="/" className="flex items-center">
               <Image
                 src="/assets/logo/degenbank-logo.png"
-                alt="Degen Reserve"
+                alt="Degen Banx"
                 width={120}
                 height={37}
                 className="h-8 w-auto"
                 priority
               />
               <p className="font-cirka ml-2 text-xl font-bold text-white md:text-2xl">
-                Degen Reserve
+                Degen Banx
               </p>
             </Link>
 
