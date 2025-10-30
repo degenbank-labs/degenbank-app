@@ -423,6 +423,11 @@ class ApiService {
       );
       const backendUser = response.data;
 
+      if (!backendUser) {
+        return null;
+      }
+
+
       // Map backend response fields to frontend interface
       const user: User = {
         userId: backendUser.user_id,
