@@ -209,8 +209,8 @@ export default function StrategyVaultsPage() {
             Strategy Vaults
           </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-            Discover and invest in high-performance vaults managed by verified
-            professionals and ecosystem partners.
+            Back the pros, ape the best vaults built by verified strategists and
+            battle-tested partners.
           </p>
         </div>
 

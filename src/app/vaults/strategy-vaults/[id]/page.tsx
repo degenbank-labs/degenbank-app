@@ -721,7 +721,7 @@ export default function VaultDetailPage() {
                 TVL
               </div>
               <div className="mt-1 text-base font-bold text-white sm:text-lg">
-                $ 0.0
+                ${vaultData?.tvl}
               </div>
             </div>
             <div className="border-border border-b px-4 py-4 sm:border-r sm:border-b-0 sm:px-8">

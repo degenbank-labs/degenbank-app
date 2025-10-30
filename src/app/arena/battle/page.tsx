@@ -1,102 +1,83 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Pagination } from "@/components/ui/pagination";
 import {
   TrophyIcon,
   CurrencyDollarIcon,
   UsersIcon,
-  ClockIcon,
   ExclamationTriangleIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import { MainNavbar } from "@/components/main-navbar";
-import Cubes from "@/components/ui/cubes";
 import LightRays from "@/components/ui/light-rays";
-import CubeLoader from "@/components/ui/cube-loader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { useBattles, type BattleWithMetrics } from "@/hooks/useBattles";
+import { useBattlesPaginated } from "@/hooks/useBattlesPaginated";
 import { getBattlePhase } from "@/utils/battleStatus";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function BattleArenaPage() {
   const router = useRouter();
-  const [hoveredArena, setHoveredArena] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
 
-  // Use battles hook for real data
-  const { battles: allArenas, loading, error, refreshBattles } = useBattles();
+  // Use the paginated battles hook
+  const {
+    battles: allArenas,
+    stats: realTimeStats,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalItems,
+    goToPage,
+    refreshBattles,
+  } = useBattlesPaginated({ limit: 10 });
 
-  // Filter arenas based on active tab using timestamp-based logic
-  const getFilteredArenas = (tab: string): BattleWithMetrics[] => {
-    switch (tab) {
-      case "stake":
-        return allArenas.filter(
-          (arena) =>
-            getBattlePhase(arena.battle_start, arena.battle_end) ===
-            "Stake Phase"
-        );
-      case "battle":
-        return allArenas.filter(
-          (arena) =>
-            getBattlePhase(arena.battle_start, arena.battle_end) ===
-            "Battle Phase"
-        );
-      case "completed":
-        return allArenas.filter(
-          (arena) =>
-            getBattlePhase(arena.battle_start, arena.battle_end) === "Completed"
-        );
-      default:
-        return allArenas;
-    }
-  };
+  // Filter arenas based on active tab
+  const arenas = useMemo(() => {
+    return allArenas.filter((arena) => {
+      if (activeTab === "all") return true;
 
-  const arenas = getFilteredArenas(activeTab);
+      const phase = getBattlePhase(arena.battle_start, arena.battle_end);
+      switch (activeTab) {
+        case "stake":
+          return phase === "Stake Phase";
+        case "battle":
+          return phase === "Battle Phase";
+        case "completed":
+          return phase === "Completed";
+        default:
+          return true;
+      }
+    });
+  }, [allArenas, activeTab]);
 
-  // Calculate dynamic grid size based on number of battles
-  const calculateGridSize = (battleCount: number): number => {
-    if (battleCount <= 1) return 1;
-    if (battleCount <= 4) return 2;
-    if (battleCount <= 9) return 3;
-    if (battleCount <= 16) return 4;
-    return Math.ceil(Math.sqrt(battleCount));
-  };
-
-  const gridSize = calculateGridSize(arenas.length);
-
-  // Calculate real-time stats using timestamp-based logic
-  const calculateStats = () => {
-    const activeBattles = allArenas.filter(
-      (arena) =>
-        getBattlePhase(arena.battle_start, arena.battle_end) === "Battle Phase"
-    ).length;
-    const totalPrizes = allArenas.reduce(
-      (sum, arena) => sum + (arena.prize_pool || 0),
-      0
-    );
-    const totalParticipants = allArenas.reduce(
-      (sum, arena) => sum + arena.total_participants,
-      0
-    );
-
+  // Calculate real-time stats for filtered arenas
+  const filteredStats = useMemo(() => {
     return {
-      activeBattles,
-      totalPrizes,
-      totalParticipants,
+      activeBattles: arenas.filter(
+        (arena) =>
+          getBattlePhase(arena.battle_start, arena.battle_end) !== "Completed"
+      ).length,
+      totalParticipants: arenas.reduce(
+        (sum, arena) => sum + arena.total_participants,
+        0
+      ),
+      totalTVL: arenas.reduce((sum, arena) => sum + arena.total_tvl, 0),
     };
-  };
+  }, [arenas]);
 
-  const realTimeStats = calculateStats();
-
-  const getStatusColor = (phase: string) => {
-    switch (phase) {
-      case "Battle Phase":
-        return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+  // Get status color for badges
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case "Stake Phase":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "Battle Phase":
         return "bg-transparent text-primary border-primary/30";
       case "Registration":
         return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
@@ -109,33 +90,24 @@ export default function BattleArenaPage() {
     }
   };
 
-  const handleCubeClick = (
-    arena: BattleWithMetrics,
-    row: number,
-    col: number
-  ) => {
-    setIsLoading(true);
-
-    // Smooth transition timing - let the cube loader complete its animation
-    // before navigating to prevent visual glitches
-    setTimeout(() => {
-      router.push(`/arena/battle/${arena.battle_id}`);
-      // Don't reset loading state immediately - let the new page handle it
-      // This prevents the glitch between pages
-    }, 1500);
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
-  const handleCubeHover = (
-    arena: BattleWithMetrics | null,
-    row: number,
-    col: number
-  ) => {
-    setHoveredArena(arena ? arena.battle_id.toString() : null);
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
-
-  const currentArena = hoveredArena
-    ? allArenas.find((a) => a.battle_id.toString() === hoveredArena)
-    : null;
 
   // Real-time duration update
   useEffect(() => {
@@ -146,21 +118,6 @@ export default function BattleArenaPage() {
 
     return () => clearInterval(interval);
   }, [refreshBattles]);
-
-  // Cleanup loading state on component unmount to prevent glitches
-  useEffect(() => {
-    return () => {
-      // Reset loading state when component unmounts
-      setIsLoading(false);
-    };
-  }, []);
-
-  // Handle router events for smooth transitions
-  useEffect(() => {
-    return () => {
-      setIsLoading(false);
-    };
-  }, [router]);
 
   // Loading state
   if (loading) {
@@ -241,9 +198,6 @@ export default function BattleArenaPage() {
     <div className="min-h-screen w-full bg-black text-white">
       <MainNavbar />
 
-      {/* Fullscreen Cube Loader */}
-      <CubeLoader isVisible={isLoading} />
-
       <div className="relative flex min-h-screen flex-col">
         {/* Background Light Rays */}
         <div className="absolute inset-0 z-0">
@@ -264,176 +218,235 @@ export default function BattleArenaPage() {
         </div>
 
         {/* Main Content */}
-        <div className="relative z-10 flex min-h-screen flex-col">
-          {/* Header Section */}
-          <div className="container mx-auto px-4 pt-8 pb-6">
-            <div className="mb-8 text-center">
-              <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
-                <span className="text-white">Battle </span>
-                <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
-                  Arenas
-                </span>
-              </h1>
+        <div className="relative z-10 mx-auto max-w-7xl space-y-6 px-4 py-6">
+          {/* Header */}
+          <div className="text-center">
+            <h1 className="font-cirka mb-6 text-4xl font-bold md:text-6xl lg:text-7xl">
+              <span className="text-white">Battle </span>
+              <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
+                Arenas
+              </span>
+            </h1>
 
-              <p className="mx-auto mb-8 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
-                Choose your arena. Each cube represents a different battle where
-                vault managers compete for the highest returns. Select your
-                strategy and join the competition.
-              </p>
+            <p className="mx-auto mb-8 max-w-3xl font-sans text-lg text-white/80 md:text-xl">
+              Compete in battle arenas where vault managers fight for the
+              highest returns. Join the competition and prove your strategy.
+            </p>
 
-              {/* Stats Cards */}
-              <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
-                <Badge
-                  variant="outline"
-                  className="border-primary text-primary rounded-none px-4 py-2"
-                >
-                  <TrophyIcon className="mr-2 h-4 w-4" />
-                  {realTimeStats.activeBattles} Active Battles
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className="rounded-none border-purple-400 bg-transparent px-4 py-2 text-purple-400"
-                >
-                  <UsersIcon className="mr-2 h-4 w-4" />
-                  {realTimeStats.totalParticipants} Total Participants
-                </Badge>
-              </div>
-
-              {/* Battle Phase Tabs */}
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="mx-auto w-full max-w-2xl"
+            {/* Stats Cards */}
+            <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
+              <Badge
+                variant="outline"
+                className="border-primary text-primary rounded-none px-4 py-2"
               >
-                <TabsList className="grid w-full grid-cols-4 rounded-none border border-white/10 bg-black/50">
-                  <TabsTrigger
-                    value="all"
-                    className="data-[state=active]:bg-primary cursor-pointer rounded-none data-[state=active]:text-black"
-                  >
-                    All Battles
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="stake"
-                    className="cursor-pointer rounded-none data-[state=active]:bg-blue-500 data-[state=active]:text-white"
-                  >
-                    Stake Phase
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="battle"
-                    className="cursor-pointer rounded-none data-[state=active]:bg-green-500 data-[state=active]:text-white"
-                  >
-                    Battle Phase
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="completed"
-                    className="cursor-pointer rounded-none data-[state=active]:bg-gray-500 data-[state=active]:text-white"
-                  >
-                    Completed
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+                <TrophyIcon className="mr-2 h-4 w-4" />
+                {filteredStats.activeBattles} Active Battles
+              </Badge>
+              <Badge
+                variant="outline"
+                className="rounded-none border-purple-400 bg-transparent px-4 py-2 text-purple-400"
+              >
+                <UsersIcon className="mr-2 h-4 w-4" />
+                {filteredStats.totalParticipants} Total Participants
+              </Badge>
+              <Badge
+                variant="outline"
+                className="rounded-none border-green-400 bg-transparent px-4 py-2 text-green-400"
+              >
+                <CurrencyDollarIcon className="mr-2 h-4 w-4" />
+                {formatCurrency(filteredStats.totalTVL)} Total TVL
+              </Badge>
             </div>
+
+            {/* Battle Phase Tabs */}
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="mx-auto w-full max-w-2xl"
+            >
+              <TabsList className="grid w-full grid-cols-4 rounded-none border border-white/10 bg-black/50">
+                <TabsTrigger
+                  value="all"
+                  className="data-[state=active]:bg-primary cursor-pointer rounded-none data-[state=active]:text-black"
+                >
+                  All Battles
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stake"
+                  className="cursor-pointer rounded-none data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                >
+                  Stake Phase
+                </TabsTrigger>
+                <TabsTrigger
+                  value="battle"
+                  className="cursor-pointer rounded-none data-[state=active]:bg-green-500 data-[state=active]:text-white"
+                >
+                  Battle Phase
+                </TabsTrigger>
+                <TabsTrigger
+                  value="completed"
+                  className="cursor-pointer rounded-none data-[state=active]:bg-gray-500 data-[state=active]:text-white"
+                >
+                  Completed
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          {/* Main Arena Grid - Responsive Container */}
-          <div className="relative flex flex-1 items-center justify-center px-4 py-8">
-            {arenas.length === 0 ? (
-              <div className="space-y-4 text-center">
-                <p className="text-lg text-white/60">
-                  No battles found for this phase
-                </p>
-                <Button
-                  onClick={() => setActiveTab("all")}
-                  variant="outline"
-                  className="border-primary text-primary hover:bg-primary rounded-none hover:text-black"
-                >
-                  View All Battles
-                </Button>
+          {/* Battle Table */}
+          <Card className="bg-card border-border rounded-none">
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-border border-b">
+                      <th className="text-muted-foreground px-4 py-4 text-left text-sm font-medium">
+                        Battle
+                      </th>
+                      <th className="text-muted-foreground px-4 py-4 text-right text-sm font-medium">
+                        Total TVL
+                      </th>
+                      <th className="text-muted-foreground px-4 py-4 text-center text-sm font-medium">
+                        Participants
+                      </th>
+                      <th className="text-muted-foreground px-4 py-4 text-center text-sm font-medium">
+                        Status
+                      </th>
+                      <th className="text-muted-foreground px-4 py-4 text-center text-sm font-medium">
+                        Time Remaining
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {arenas.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center">
+                          <div className="space-y-4">
+                            <p className="text-lg text-white/60">
+                              No battles found for this phase
+                            </p>
+                            <Button
+                              onClick={() => setActiveTab("all")}
+                              variant="outline"
+                              className="border-primary text-primary hover:bg-primary rounded-none hover:text-black"
+                            >
+                              View All Battles
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      arenas.map((battle) => {
+                        const phase = getBattlePhase(
+                          battle.battle_start,
+                          battle.battle_end
+                        );
+
+                        return (
+                          <tr
+                            key={battle.battle_id}
+                            className="group border-border/50 hover:bg-primary/5 relative h-16 cursor-pointer border-b transition-all duration-300"
+                            onClick={() =>
+                              router.push(`/arena/battle/${battle.battle_id}`)
+                            }
+                          >
+                            {/* Battle Column */}
+                            <td className="relative px-4 py-4 text-left">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0 self-start">
+                                  {battle.battle_image ? (
+                                    <Image
+                                      src={battle.battle_image}
+                                      alt={battle.battle_name || "Battle"}
+                                      width={40}
+                                      height={40}
+                                      className="rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                                      <span className="text-xs font-medium">
+                                        {battle.battle_name?.charAt(0) || "B"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                                  <div className="truncate leading-tight font-medium text-white">
+                                    {battle.battle_name || "Unknown Battle"}
+                                  </div>
+                                  <div className="text-muted-foreground mt-1 truncate text-sm leading-tight">
+                                    {formatDate(battle.battle_start)} -{" "}
+                                    {formatDate(battle.battle_end)}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Total TVL */}
+                            <td className="relative px-4 py-4 text-right">
+                              <div className="flex h-full items-center justify-end">
+                                <div className="text-sm font-medium text-green-400">
+                                  {formatCurrency(battle.total_tvl)}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Participants */}
+                            <td className="relative px-4 py-4 text-center">
+                              <div className="flex h-full items-center justify-center">
+                                <div className="text-sm font-medium text-white">
+                                  {battle.total_participants}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Status */}
+                            <td className="relative px-4 py-4 text-center">
+                              <div className="flex h-full items-center justify-center">
+                                <Badge
+                                  variant="outline"
+                                  className={`${getStatusColor(phase)} rounded-none border-none bg-transparent`}
+                                >
+                                  {phase}
+                                </Badge>
+                              </div>
+                            </td>
+
+                            {/* Time Remaining */}
+                            <td className="relative px-4 py-4 text-center">
+                              <div className="flex h-full items-center justify-center">
+                                <div className="text-muted-foreground text-sm">
+                                  {battle.timeRemaining}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <>
-                {/* Centered Arena Cubes */}
-                <div className="w-fit">
-                  <Cubes
-                    gridSize={gridSize}
-                    cubeSize={150}
-                    maxAngle={60}
-                    radius={12}
-                    easing="power1.out"
-                    duration={{ enter: 0.05, leave: 0.1 }}
-                    borderStyle="2px solid #6fb7a5"
-                    faceColor="transparent"
-                    rippleColor="#6fb7a5"
-                    rippleSpeed={1.5}
-                    autoAnimate={false}
-                    rippleOnClick={true}
-                    cellGap={60}
-                    arenaData={arenas}
-                    onCubeClick={handleCubeClick}
-                    onCubeHover={handleCubeHover}
+
+              {/* Pagination - Always show when there are multiple pages */}
+              {totalPages > 1 && (
+                <div className="border-border/50 flex items-center justify-between border-t px-6 py-4">
+                  <div className="text-muted-foreground text-sm">
+                    Showing {(currentPage - 1) * 10 + 1} to{" "}
+                    {Math.min(currentPage * 10, totalItems)} of {totalItems}{" "}
+                    battles
+                  </div>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    itemsPerPage={10}
+                    totalItems={totalItems}
                   />
                 </div>
-
-                {/* Selected Arena Details - Responsive positioning */}
-                {currentArena && (
-                  <div className="animate-in slide-in-from-right-5 absolute top-1/2 right-80 z-50 w-80 max-w-[calc(100vw-32px)] -translate-y-1/2 transform duration-300 ease-out">
-                    <Card className="bg-card/95 border-border/50 rounded-none shadow-2xl backdrop-blur-md">
-                      <CardContent className="p-6">
-                        <div className="mb-4">
-                          <h3 className="font-cirka mb-2 text-2xl font-bold text-white">
-                            {currentArena.battle_name}
-                          </h3>
-                          <p className="mb-4 text-sm text-white/60">
-                            {currentArena.battle_description}
-                          </p>
-
-                          <div className="mb-4 flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className={`${getStatusColor(getBattlePhase(currentArena.battle_start, currentArena.battle_end))} rounded-none`}
-                            >
-                              {getBattlePhase(
-                                currentArena.battle_start,
-                                currentArena.battle_end
-                              )}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className="rounded-none border-blue-400 px-2 py-1 text-xs text-blue-400"
-                            >
-                              <ClockIcon className="mr-1 h-3 w-3" />
-                              {currentArena.timeRemaining}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-white/60">Total TVL</p>
-                              <p className="font-bold text-white">
-                                ${(currentArena.total_tvl / 1000).toFixed(0)}K
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-white/60">Active Vaults</p>
-                              <p className="font-bold text-white">
-                                {currentArena.active_vaults}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-white/60">Participants</p>
-                              <p className="font-bold text-white">
-                                {currentArena.total_participants}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

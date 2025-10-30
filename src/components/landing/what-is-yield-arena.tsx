@@ -111,14 +111,18 @@ const data = [
                 <div className="bg-primary h-2 w-2"></div>
                 <span className="text-sm font-medium">Vault Alpha</span>
               </div>
-              <Badge className="bg-primary text-black">+12.5% ROI</Badge>
+              <Badge className="bg-primary rounded-none text-black">
+                +12.5% ROI
+              </Badge>
             </div>
             <div className="border-border bg-card/50 flex items-center justify-between border p-3">
               <div className="flex items-center gap-2">
                 <div className="bg-muted-foreground h-2 w-2"></div>
                 <span className="text-sm font-medium">Vault Beta</span>
               </div>
-              <Badge variant="secondary">+8.2% ROI</Badge>
+              <Badge variant="secondary" className="rounded-none">
+                +8.2% ROI
+              </Badge>
             </div>
             <Card className="border-border bg-card/50 rounded-none border p-4">
               <div className="mb-3 flex items-center gap-2">

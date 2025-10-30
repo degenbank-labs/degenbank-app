@@ -20,6 +20,7 @@ import { useBattleVaults } from "@/hooks/useBattleVaults";
 import { useBattleComments } from "@/hooks/useBattleComments";
 import { BattleCommentary } from "@/components/battle-commentary";
 import { getBattlePhases, getBattlePhase } from "@/utils/battleStatus";
+import Image from "next/image";
 
 export default function BattleDetailPage() {
   const params = useParams();
@@ -292,6 +293,13 @@ export default function BattleDetailPage() {
                       <CardContent className="p-6">
                         <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center space-x-4">
+                            <Image
+                              src={vault?.vault_image || ""}
+                              alt={vault?.vault_name || "Vault"}
+                              width={40}
+                              height={40}
+                              className="rounded-full object-cover"
+                            />
                             <div>
                               <h3 className="font-cirka text-2xl font-bold text-white">
                                 {vault.vault_name}
@@ -313,31 +321,15 @@ export default function BattleDetailPage() {
 
                         <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
                           <div>
-                            <p className="mb-1 text-xs text-white/60">
-                              Performance
-                            </p>
-                            <p
-                              className={`text-lg font-bold ${
-                                (vault.apy || 0) > 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {(vault.apy || 0) > 0 ? "+" : ""}
-                              {(vault.apy || 0).toFixed(1)}%
-                            </p>
-                          </div>
-                          <div>
                             <p className="mb-1 text-xs text-white/60">APY</p>
                             <p className="text-lg font-bold text-white">
-                              {(vault.apy || 0).toFixed(1)}%
+                              {vault.apy || 0}%
                             </p>
                           </div>
                           <div>
                             <p className="mb-1 text-xs text-white/60">TVL</p>
                             <p className="text-lg font-bold text-white">
-                              {/* TODO: Replace with actual TVL from backend */}
-                              $ 0K
+                              {vault.tvl || 0}
                             </p>
                           </div>
                           <div>
@@ -346,27 +338,9 @@ export default function BattleDetailPage() {
                             </p>
                             <p className="flex items-center text-lg font-bold text-white">
                               <UsersIcon className="mr-1 h-4 w-4" />
-                              {/* TODO: Replace with actual participants count from backend */}
-                              0
+                              {vault.total_stakers || 0}
                             </p>
                           </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <div className="mb-1 flex justify-between text-xs text-white/60">
-                            <span>Performance Progress</span>
-                            <span>
-                              {(vault.apy || 0) > 0 ? "+" : ""}
-                              {(vault.apy || 0).toFixed(1)}%
-                            </span>
-                          </div>
-                          <Progress
-                            value={Math.max(
-                              0,
-                              Math.min(100, ((vault.apy || 0) + 10) * 5)
-                            )}
-                            className="h-2"
-                          />
                         </div>
 
                         <div className="flex items-center justify-between">

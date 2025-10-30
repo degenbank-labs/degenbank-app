@@ -11,28 +11,28 @@ export function Hero() {
   return (
     <section className="min-h-screen bg-black text-white">
       {/* Text Content Section */}
-      <div className="container mx-auto px-4 pt-24 md:pt-20 pb-8 text-center">
+      <div className="container mx-auto px-4 pt-24 pb-8 text-center md:pt-20">
         <div className="mx-auto max-w-6xl">
           {/* Main Heading with Cirka Font */}
-          <h1 className="font-cirka mb-6 md:mb-8 text-4xl md:text-6xl lg:text-8xl leading-tight font-bold tracking-tight text-white">
-            Vault Managers
+          <h1 className="font-cirka mb-6 text-4xl leading-tight font-bold tracking-tight text-white md:mb-8 md:text-6xl lg:text-8xl">
+            Degen Banx
             <br />
             <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
-              battle with strategy
+              Bank for Degen
             </span>
           </h1>
 
           {/* Description with Geist Font */}
-          <p className="mx-auto mb-8 md:mb-12 max-w-4xl font-sans text-base md:text-lg leading-relaxed text-white/90 px-4">
-            Every yield is a trophy. Every epoch is a war.
+          <p className="mx-auto mb-8 max-w-4xl px-4 font-sans text-base leading-relaxed text-white/90 md:mb-12 md:text-lg">
+            Where capital becomes a weapon. Low risk. High chaos. Real yield.
             <br />
-            No-loss competition. Real performance. On-chain glory.
+            Every epoch’s a battlefield, every gain, a trophy.
           </p>
 
           {/* CTA Buttons */}
           <div className="relative z-10 mb-8 flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Link href="/arena/battle">
-              <Button className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 min-w-[140px] cursor-pointer px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg">
+              <Button className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 min-w-[140px] cursor-pointer px-6 py-3 text-base font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg md:px-8 md:py-4 md:text-lg">
                 Go to Arena
                 <ArrowRightIcon className="ml-2 h-5 w-5" />
               </Button>
@@ -42,14 +42,14 @@ export function Hero() {
       </div>
 
       {/* Video Section */}
-      <div className="container mx-auto -mt-20 md:-mt-36 px-4 pb-12 md:pb-20">
+      <div className="container mx-auto -mt-20 px-4 pb-12 md:-mt-36 md:pb-20">
         <div className="mx-auto max-w-2xl">
-          <div className="relative overflow-hidden rounded-xl md:rounded-2xl shadow-2xl">
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
+          <div className="relative overflow-hidden rounded-xl shadow-2xl md:rounded-2xl">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
               className="h-auto w-full"
               poster="/assets/videos/vault-poster.jpg"
             >
@@ -63,8 +63,8 @@ export function Hero() {
       {/* Scroll Indicator */}
       <div className="flex justify-center pb-8">
         <div className="animate-bounce">
-          <div className="border-primary flex h-8 md:h-10 w-5 md:w-6 justify-center rounded-full border-2">
-            <div className="bg-primary mt-2 h-2 md:h-3 w-1 animate-pulse rounded-full" />
+          <div className="border-primary flex h-8 w-5 justify-center rounded-full border-2 md:h-10 md:w-6">
+            <div className="bg-primary mt-2 h-2 w-1 animate-pulse rounded-full md:h-3" />
           </div>
         </div>
       </div>

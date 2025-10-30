@@ -84,6 +84,8 @@ export interface Vault {
   // Relations
   manager?: Manager;
   battle?: Battle;
+  tvl: number;
+  total_stakers: number;
 }
 
 export interface GetVaultsResponse {
