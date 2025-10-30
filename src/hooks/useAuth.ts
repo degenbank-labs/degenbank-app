@@ -151,6 +151,7 @@ export function useAuth() {
   // Sync user with backend
   const syncWithBackend = useCallback(async () => {
     if (!privyUser || !ready || !authenticated || isSyncing) {
+      console.log("Sync conditions not met:", { privyUser: !!privyUser, ready, authenticated, isSyncing });
       return;
     }
 
@@ -188,9 +189,18 @@ export function useAuth() {
         }
 
         // If user doesn't exist, create new user
-        const accessToken = await getAccessToken();
+        let accessToken: string | null = null;
+        try {
+          accessToken = await getAccessToken();
+        } catch (error) {
+          console.error("Failed to get access token:", error);
+          toast.error("Authentication failed. Please try logging in again.");
+          return;
+        }
+
         if (!accessToken) {
-          console.error("No access token available");
+          console.error("No access token available - user may not be fully authenticated");
+          toast.error("Authentication required. Please log in again.");
           return;
         }
 
@@ -245,9 +255,14 @@ export function useAuth() {
 
   // Handle authentication state changes
   useEffect(() => {
-    if (ready && authenticated && privyUser && !isLoggingOut && !user) {
-      // Only sync when user is null to avoid infinite calls
-      syncWithBackend();
+    if (ready && authenticated && privyUser && !isLoggingOut && !user && !isSyncing) {
+      // Only sync when user is null and not already syncing to avoid infinite calls
+      // Add a small delay to ensure Privy is fully ready
+      const timer = setTimeout(() => {
+        syncWithBackend();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     } else if (ready && !authenticated && !isLoggingOut) {
       setUser(null);
     }
@@ -258,7 +273,7 @@ export function useAuth() {
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [ready, authenticated, privyUser, isLoggingOut, user]);
+  }, [ready, authenticated, privyUser, isLoggingOut, user, isSyncing]);
 
   const logout = async () => {
     setIsLoggingOut(true);
