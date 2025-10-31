@@ -15,25 +15,26 @@ export function Hero() {
         <div className="mx-auto max-w-6xl">
           {/* Main Heading with Cirka Font */}
           <h1 className="font-cirka mb-6 text-4xl leading-tight font-bold tracking-tight text-white md:mb-8 md:text-6xl lg:text-8xl">
-            Degen Banx
+            Where your yield
             <br />
             <span className="from-primary via-primary to-accent bg-gradient-to-r bg-clip-text text-transparent">
-              Bank for Degen
+              Goes to war
             </span>
           </h1>
 
           {/* Description with Geist Font */}
           <p className="mx-auto mb-8 max-w-4xl px-4 font-sans text-base leading-relaxed text-white/90 md:mb-12 md:text-lg">
-            Where capital becomes a weapon. Low risk. High chaos. Real yield.
+            Deposit your funds, enter the vault battle, and win everyone else’s
+            interest. Bank made for degens.
             <br />
-            Every epoch’s a battlefield, every gain, a trophy.
+            Same deposit. Capped downside. Insane upside.
           </p>
 
           {/* CTA Buttons */}
           <div className="relative z-10 mb-8 flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Link href="/arena/battle">
               <Button className="bg-primary hover:bg-primary/90 hover:shadow-primary/25 min-w-[140px] cursor-pointer px-6 py-3 text-base font-bold text-black transition-all duration-300 hover:scale-105 hover:shadow-lg md:px-8 md:py-4 md:text-lg">
-                Go to Arena
+                Enter the Arena
                 <ArrowRightIcon className="ml-2 h-5 w-5" />
               </Button>
             </Link>
